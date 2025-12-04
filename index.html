@@ -111,9 +111,9 @@ function render(){
   })
 }
 
-function addEntry(ign, uid){
+function addEntry(ign, uid){ alert("Done! Player added.");
   const list = loadList();
-  list.unshift({ign:ign, uid:uid, added:Date.now(alert("Done! Player added.")});
+  list.unshift({ign:ign, uid:uid, added:Date.now});
   saveList(list);
   render();
 }
