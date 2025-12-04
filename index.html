@@ -154,14 +154,26 @@ window.addEventListener('DOMContentLoaded', ()=>{
   $('addBtn').onclick = ()=>{
     const ign = $('ign').value.trim();
     const uid = $('uid').value.trim();
-    if(!ign){ alert('Enter IGN'); return }
-    if(uid.length<4){ alert('Enter valid UID'); return }
-    addEntry(ign, uid);
-    $('ign').value=''; 
-    $('uid').value='';
 
+    if(!ign){
+        alert('Enter IGN');
+        return;
+    }
+
+    if(uid.length < 4){
+        alert('Enter valid UID');
+        return;
+    }
+
+    addEntry(ign, uid);
+
+    $('ign').value = '';
+    $('uid').value = '';
+
+    // ✅ Popup message after adding
     alert("Done! Player added.");
-  };
+};
+
   $('adminBtn').onclick = promptAdmin;
   $('exportBtn').onclick = exportCSV;
 });
