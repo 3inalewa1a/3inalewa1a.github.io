@@ -24,6 +24,7 @@
     .hint{color:var(--muted);font-size:13px;margin-top:8px}
     footer{margin-top:12px;color:var(--muted);font-size:13px}
     @media (max-width:640px){form{flex-direction:column} .controls{flex-direction:row}}
+    <style>
     .bracket {
   display: flex;
   gap: 40px;
@@ -203,88 +204,6 @@ window.addEventListener('DOMContentLoaded', ()=>{
   $('exportBtn').onclick = exportCSV;
 });
   <script>
-function openBracketSetup() {
-    const players = JSON.parse(localStorage.getItem("players")) || [];
-
-    if (players.length < 8) {
-        alert("You need at least 8 players for a tournament.");
-        return;
-    }
-
-    // Pick first 8 players
-    const selected = players.slice(0, 8);
-
-    // Build bracket slots
-    window.bracket = {
-        qf: [
-            [selected[0], selected[1]],
-            [selected[2], selected[3]],
-            [selected[4], selected[5]],
-            [selected[6], selected[7]]
-        ],
-        sf: [ [null, null], [null, null] ],
-        final: [null, null],
-        champion: null
-    };
-
-    renderBracket();
-}
-
-function renderBracket() {
-    let html = `
-    <div class="bracket">
-        <div class="round">
-            <div class="round-title">Quarter Finals</div>
-            ${makeRound('qf')}
-        </div>
-
-        <div class="round">
-            <div class="round-title">Semi Finals</div>
-            ${makeRound('sf')}
-        </div>
-
-        <div class="round">
-            <div class="round-title">Final</div>
-            ${makeRound('final')}
-        </div>
-
-        <div class="round">
-            <div class="round-title">Champion</div>
-            <div class="match">${window.bracket.champion ? window.bracket.champion.IGN : "?"}</div>
-        </div>
-    </div>
-    `;
-
-    document.getElementById("bracketArea").innerHTML = html;
-}
-
-function makeRound(roundName) {
-    return window.bracket[roundName]
-        .map((match, index) => `
-            <div class="match" onclick="selectWinner('${roundName}', ${index})">
-                ${match[0] ? match[0].IGN : "?"}  
-                <br>VS<br>
-                ${match[1] ? match[1].IGN : "?"}
-            </div>
-        `)
-        .join("");
-}
-
-function selectWinner(round, index) {
-    const match = window.bracket[round][index];
-    if (!match[0] || !match[1]) return;
-
-    const winner = confirm(`Click OK if ${match[0].IGN} wins.\nCancel if ${match[1].IGN} wins.`)
-        ? match[0]
-        : match[1];
-
-    // Move winner forward
-    if (round === "qf") window.bracket.sf[Math.floor(index/2)][index % 2] = winner;
-    if (round === "sf") window.bracket.final[Math.floor(index/2)] = winner;
-    if (round === "final") window.bracket.champion = winner;
-
-    renderBracket();
-}
 </script>
 
 </body>
