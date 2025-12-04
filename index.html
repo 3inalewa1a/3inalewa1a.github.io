@@ -113,7 +113,7 @@ function render(){
 
 function addEntry(ign, uid){
   const list = loadList();
-  list.unshift({ign:ign, uid:uid, added:Date.now()});
+  list.unshift({ign:ign, uid:uid, added:Date.now(alert("Done! Player added.")});
   saveList(list);
   render();
 }
@@ -158,8 +158,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
     if(uid.length<4){ alert('Enter valid UID'); return }
     addEntry(ign, uid);
     $('ign').value=''; $('uid').value='';
-  };alert("Done!");
-  
+  };
   $('adminBtn').onclick = promptAdmin;
   $('exportBtn').onclick = exportCSV;
 });
