@@ -38,10 +38,33 @@
     .hint{color:var(--muted);font-size:13px;margin-top:8px}
     footer{margin-top:12px;color:var(--muted);font-size:13px}
     @media (max-width:640px){form{flex-direction:column} .controls{flex-direction:row}}
+    #popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.8);
+  background: #22c55e;
+  color: white;
+  padding: 15px 25px;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: bold;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 9999;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
+
+#popup.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
   </style>
 </head>
 <body>
   <div class="wrap">
+  <div id="popup">Done!</div>
     <header>
       <h1 style="font-size:80px;font-weight:900;color:#ff0000;text-shadow:4px 4px 10px #000, 0 0 25px #ff0000, 0 0 8px #000; font-family:'Impact','Haettenschweiler','Anton','Arial Black',sans-serif;letter-spacing:3px;">🔥 FreeFire IGN & UID List 🔥</h1>
       <div>
@@ -183,6 +206,15 @@ function exportCSV(){
 function validateUID(uid){
   return uid.trim().length>=4; // basic length check
 }
+  function showPopup(message) {
+    const popup = document.getElementById("popup");
+    popup.textContent = message;
+    popup.classList.add("show");
+
+    setTimeout(() => {
+        popup.classList.remove("show");
+    }, 2000);
+}
 
 // UI wiring
 window.addEventListener('DOMContentLoaded', ()=>{
@@ -190,11 +222,26 @@ window.addEventListener('DOMContentLoaded', ()=>{
   $('addBtn').onclick = ()=>{
     const ign = $('ign').value.trim();
     const uid = $('uid').value.trim();
-    if(!ign){ alert('Enter IGN'); return }
-    if(!validateUID(uid)){ alert('Enter valid UID (at least 4 characters)'); return }
+
+    if(!ign){
+        showPopup("Enter IGN");
+        return;
+    }
+
+    if(uid.length < 4){
+        showPopup("Enter valid UID");
+        return;
+    }
+
     addEntry(ign, uid);
-    $('ign').value=''; $('uid').value='';
-  };
+
+    $('ign').value='';
+    $('uid').value='';
+
+    // 🔥 Stylish popup
+    showPopup("Done! Player added.");
+};
+
   $('adminBtn').onclick = ()=>{
     if(isAdmin){ if(confirm('Disable Admin Mode?')){ isAdmin=false; $('adminBtn').textContent='Enter Admin Mode'; render(); } return }
     promptAdmin();
