@@ -5,6 +5,20 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>FreeFire IGN & UID List</title>
   <style>
+    .match {
+  width: 160px;
+  padding: 12px;
+  margin: 10px 0;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  text-align: center;
+  cursor: pointer;
+  font-size: 14px;
+}
+.match:hover {
+  background: rgba(255,255,255,0.12);
+}
     :root{--bg:#0f1724;--card:#0b1220;--accent:#06b6d4;--muted:#94a3b8;--glass:rgba(255,255,255,0.04)}
     html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Roboto,system-ui,-apple-system,Arial}
     body {
@@ -82,6 +96,10 @@
       <div class="hint">Players can add their IGN & UID. Deleting entries requires Admin Mode (password-protected).</div>
 
       <div class="list" id="list"></div>
+      <div class="card" style="margin-top:30px;">
+  <h2>🔥 1v1 Tournament Bracket 🔥</h2>
+  <div id="bracketArea"></div>
+</div>
       <footer>
         <div class="meta">TO GOD BE THE GLORY.</div>
       </footer>
@@ -250,71 +268,92 @@ window.addEventListener('DOMContentLoaded', ()=>{
   $('exportBtn').onclick = exportCSV;
 });
 
-  // ==== 1v1 BRACKET SYSTEM (8 PLAYERS) ====
-sf: [ [null, null], [null, null] ],
-final: [null, null],
-champion: null
-};
+// ======== BRACKET SYSTEM (8 PLAYERS) ========
 
-
-renderBracket();
+// Auto-generate bracket structure
+function generateBracketPlayers() {
+  const players = loadList().slice(0, 8); // first 8 entries
+  while (players.length < 8) players.push({ ign: "Empty", uid: "—" });
+  return players;
 }
 
+function initBracket() {
+  const p = generateBracketPlayers();
+  window.bracket = {
+    qf: [ [p[0],p[1]], [p[2],p[3]], [p[4],p[5]], [p[6],p[7]] ],
+    sf: [ [null,null], [null,null] ],
+    final: [null,null],
+    champion: null
+  };
+}
 
 function renderBracket() {
-const html = `
-<div style="display:flex;gap:40px;overflow-x:auto;">
-<div>
-<h3>Quarter Finals</h3>
-${makeRound('qf')}
-</div>
-<div>
-<h3>Semi Finals</h3>
-${makeRound('sf')}
-</div>
-<div>
-<h3>Final</h3>
-${makeRound('final')}
-</div>
-<div>
-<h3>Champion</h3>
-<div class="match">${window.bracket.champion ? window.bracket.champion.ign : '?'}</div>
-</div>
-</div>`;
+  const html = `
+  <div style="display:flex;gap:40px;overflow-x:auto;">
+    
+    <div>
+      <h3>Quarter Finals</h3>
+      ${makeRound('qf')}
+    </div>
 
+    <div>
+      <h3>Semi Finals</h3>
+      ${makeRound('sf')}
+    </div>
 
-document.getElementById('bracketArea').innerHTML = html;
+    <div>
+      <h3>Final</h3>
+      ${makeRound('final')}
+    </div>
+
+    <div>
+      <h3>Champion</h3>
+      <div class="match">${window.bracket.champion ? window.bracket.champion.ign : '?'}</div>
+    </div>
+
+  </div>
+  `;
+  document.getElementById("bracketArea").innerHTML = html;
 }
-
 
 function makeRound(roundName) {
-return window.bracket[roundName]
-.map((match, i) => `
-<div class="match" onclick="selectWinner('${roundName}', ${i})">
-${match[0] ? match[0].ign : '?'}<br>VS<br>${match[1] ? match[1].ign : '?'}
-</div>`)
-.join('');
+  return window.bracket[roundName]
+    .map((match, i) => `
+      <div class="match" onclick="selectWinner('${roundName}', ${i})">
+        ${match[0] ? match[0].ign : '?'}<br>VS<br>${match[1] ? match[1].ign : '?'}
+      </div>
+    `)
+    .join('');
 }
-
 
 function selectWinner(round, index) {
-const match = window.bracket[round][index];
-if (!match[0] || !match[1]) return;
+  const match = window.bracket[round][index];
+  if (!match[0] || !match[1]) return;
 
+  const winner = confirm(`OK = ${match[0].ign} wins | Cancel = ${match[1].ign} wins`)
+    ? match[0]
+    : match[1];
 
-const winner = confirm(`OK = ${match[0].ign} wins | Cancel = ${match[1].ign} wins`)
-? match[0]
-: match[1];
+  if (round === "qf") window.bracket.sf[Math.floor(index/2)][index % 2] = winner;
+  if (round === "sf") window.bracket.final[index] = winner;
+  if (round === "final") window.bracket.champion = winner;
 
-
-if (round === 'qf') window.bracket.sf[Math.floor(index/2)][index % 2] = winner;
-if (round === 'sf') window.bracket.final[index] = winner;
-if (round === 'final') window.bracket.champion = winner;
-
-
-renderBracket();
+  renderBracket();
 }
 
+// Auto-refresh bracket when page loads or when new players are added
+window.addEventListener("DOMContentLoaded", () => {
+  initBracket();
+  renderBracket();
+});
+
+// Hook into your existing addEntry function
+const originalAdd = addEntry;
+addEntry = function(ign, uid) {
+  originalAdd(ign, uid);
+  initBracket();
+  renderBracket();
+};
 
 </script>
 
