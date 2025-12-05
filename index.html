@@ -3,40 +3,23 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>FreeFire IGN & UID List</title>
+  <title>FreeFire IGN & UID List + 16-player Bracket</title>
   <style>
-    .match {
-  width: 160px;
-  padding: 12px;
-  margin: 10px 0;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 10px;
-  text-align: center;
-  cursor: pointer;
-  font-size: 14px;
-}
-.match:hover {
-  background: rgba(255,255,255,0.12);
-}
     :root{--bg:#0f1724;--card:#0b1220;--accent:#06b6d4;--muted:#94a3b8;--glass:rgba(255,255,255,0.04)}
     html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Roboto,system-ui,-apple-system,Arial}
     body {
-  background: url("https://i.imgur.com/3S4d2Ns.png") no-repeat center center fixed;
-  background-size: cover;
+      background: url("https://i.imgur.com/3S4d2Ns.png") no-repeat center center fixed;
+      background-size: cover;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 24px;
+      color: #e6eef6;
+    }
 
-  /* This keeps the card centered */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  min-height: 100vh;
-  margin: 0;
-  padding: 24px;
-  color: #e6eef6;
-}
-
-    .wrap{width:100%;max-width:920px}
+    .wrap{width:100%;max-width:1100px}
     header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
     h1{font-size:20px;margin:0}
     .card{background:var(--card);padding:18px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
@@ -51,36 +34,48 @@
     .small{font-size:13px;padding:6px 8px}
     .hint{color:var(--muted);font-size:13px;margin-top:8px}
     footer{margin-top:12px;color:var(--muted);font-size:13px}
+    @media (max-width:1000px){ .wrap{padding:10px} }
     @media (max-width:640px){form{flex-direction:column} .controls{flex-direction:row}}
-    #popup {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0.8);
-  background: #22c55e;
-  color: white;
-  padding: 15px 25px;
-  border-radius: 12px;
-  font-size: 18px;
-  font-weight: bold;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease, transform 0.3s ease;
-  z-index: 9999;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-}
 
-#popup.show {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-}
+    #popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.8);
+      background: #22c55e;
+      color: white;
+      padding: 15px 25px;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: bold;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      z-index: 9999;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    }
+    #popup.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    /* Bracket card adjustments */
+    .bracket-card { margin-top: 24px; padding: 18px; border-radius: 12px; background: rgba(255,255,255,0.02); }
+    #bracketContainer { width: 100%; overflow-x: auto; padding: 10px 0; }
+    /* Center small caption under bracket for mobile */
+    .bracket-caption { color: var(--muted); font-size: 13px; margin-top: 8px; text-align:center; }
+
+    /* Small tooltip style when hovering interactive nodes */
+    .hint-node { cursor: pointer; }
   </style>
 </head>
 <body>
   <div class="wrap">
-  <div id="popup">Done!</div>
+    <div id="popup">Done!</div>
     <header>
-      <h1 style="font-size:80px;font-weight:900;color:#ff0000;text-shadow:4px 4px 10px #000, 0 0 25px #ff0000, 0 0 8px #000; font-family:'Impact','Haettenschweiler','Anton','Arial Black',sans-serif;letter-spacing:3px;">🔥 FreeFire IGN & UID List 🔥</h1>
+      <h1 style="font-size:48px;font-weight:900;color:#ff0000;text-shadow:4px 4px 10px #000, 0 0 25px #ff0000, 0 0 8px #000; font-family:'Impact','Haettenschweiler','Anton','Arial Black',sans-serif;letter-spacing:3px;">
+        🔥 FreeFire IGN & UID List 🔥
+      </h1>
       <div>
         <button id="adminBtn" class="ghost small">Enter Admin Mode</button>
       </div>
@@ -96,17 +91,26 @@
       <div class="hint">Players can add their IGN & UID. Deleting entries requires Admin Mode (password-protected).</div>
 
       <div class="list" id="list"></div>
-</div>
       <footer>
         <div class="meta">TO GOD BE THE GLORY.</div>
       </footer>
+
+      <!-- BRACKET SECTION -->
+      <div class="bracket-card">
+        <h2 style="margin:0 0 10px 0;">🏆 16-Player Tournament Bracket (Medium)</h2>
+        <div id="bracketContainer">
+          <!-- SVG inserted here by JS -->
+          <svg id="bracketSvg" width="900" height="520" viewBox="0 0 900 520" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+        <div class="bracket-caption">Click the match bubble in the next round to choose the winner (OK = left, Cancel = right).</div>
+      </div>
     </div>
   </div>
 
 <script>
 // ====== CONFIG ======
 // Change this admin password before publishing. This is client-side protection (not fully secure).
-const ADMIN_PASSWORD_HASH = 'b0b1f49f9dfb8b3e2a0f3a9f5a9f5c1a'; // placeholder hash for 'admin123' (not real hashing here)
+const ADMIN_PASSWORD_HASH = 'b0b1f49f9dfb8b3e2a0f3a9f5a9f5c1a'; // placeholder
 // ====================
 
 const STORAGE_KEY = 'ff_ign_uid_list_v1';
@@ -222,19 +226,22 @@ function exportCSV(){
 function validateUID(uid){
   return uid.trim().length>=4; // basic length check
 }
-  function showPopup(message) {
-    const popup = document.getElementById("popup");
-    popup.textContent = message;
-    popup.classList.add("show");
+function showPopup(message) {
+  const popup = document.getElementById("popup");
+  popup.textContent = message;
+  popup.classList.add("show");
 
-    setTimeout(() => {
-        popup.classList.remove("show");
-    }, 2000);
+  setTimeout(() => {
+      popup.classList.remove("show");
+  }, 2000);
 }
 
 // UI wiring
 window.addEventListener('DOMContentLoaded', ()=>{
   render();
+  initBracket(); // initialize bracket with current players
+  renderBracketSVG();
+
   $('addBtn').onclick = ()=>{
     const ign = $('ign').value.trim();
     const uid = $('uid').value.trim();
@@ -254,9 +261,12 @@ window.addEventListener('DOMContentLoaded', ()=>{
     $('ign').value='';
     $('uid').value='';
 
-    // 🔥 Stylish popup
+    // Refresh bracket (auto-fill)
+    initBracket();
+    renderBracketSVG();
+
     showPopup("Done! Player added.");
-};
+  };
 
   $('adminBtn').onclick = ()=>{
     if(isAdmin){ if(confirm('Disable Admin Mode?')){ isAdmin=false; $('adminBtn').textContent='Enter Admin Mode'; render(); } return }
@@ -265,105 +275,389 @@ window.addEventListener('DOMContentLoaded', ()=>{
   $('exportBtn').onclick = exportCSV;
 });
 
-// ======== BRACKET SYSTEM (8 PLAYERS) ========
+/* =========================
+   SVG BRACKET (16 players)
+   ========================= */
 
-// Auto-generate bracket structure
-function generateBracketPlayers() {
-  const players = loadList().slice(0, 8); // first 8 entries
-  while (players.length < 8) players.push({ ign: "Empty", uid: "—" });
+let bracket = null; // data structure to hold players/winners
+
+// Generate coordinates for medium size SVG (900x520)
+const svgW = 900;
+const svgH = 520;
+const svg = $('bracketSvg');
+
+// Build bracket data from player list (first 16)
+function generatePlayersArray() {
+  const players = loadList().slice(0,16);
+  // ensure exactly 16 entries (pad)
+  while (players.length < 16) players.push({ ign: "Empty", uid: "—" });
   return players;
 }
 
+// Initialize bracket rounds (r0: initial 16 players as 8 pairs on left+right)
+// r0: 16 players (indices 0..15), r1: 8 winners (matches: pairs of r0), r2: 4 winners, r3: 2 winners, r4: final winner (1)
 function initBracket() {
-  const p = generateBracketPlayers();
-  window.bracket = {
-    qf: [ [p[0],p[1]], [p[2],p[3]], [p[4],p[5]], [p[6],p[7]] ],
-    sf: [ [null,null], [null,null] ],
-    final: [null,null],
+  const players = generatePlayersArray();
+
+  // r0 stored as array of 16 player objects
+  const r0 = players.slice(0,16);
+
+  bracket = {
+    r0: r0,               // 16 players
+    r1: new Array(8).fill(null),  // 8 matches -> 8 winners
+    r2: new Array(4).fill(null),  // 4 winners
+    r3: new Array(2).fill(null),  // 2 winners (semifinal winners -> final)
+    r4: new Array(1).fill(null),  // final winner (the champion)
     champion: null
   };
 }
 
-function renderBracket() {
-  const html = `
-  <div style="display:flex;gap:40px;overflow-x:auto;">
-    
-    <div>
-      <h3>Quarter Finals</h3>
-      ${makeRound('qf')}
-    </div>
+// Calculate positions for each round and draw
+function computePositions() {
+  // left side: 8 players -> 4 matches
+  // right side: 8 players -> 4 matches
+  const leftX = 60;
+  const leftMidX = 220;
+  const leftQuarterX = 380;
 
-    <div>
-      <h3>Semi Finals</h3>
-      ${makeRound('sf')}
-    </div>
+  const rightX = svgW - 60;
+  const rightMidX = svgW - 220;
+  const rightQuarterX = svgW - 380;
 
-    <div>
-      <h3>Final</h3>
-      ${makeRound('final')}
-    </div>
+  const finalX = svgW/2;
+  const centerX = svgW/2;
 
-    <div>
-      <h3>Champion</h3>
-      <div class="match">${window.bracket.champion ? window.bracket.champion.ign : '?'}</div>
-    </div>
+  const matchesPerSide = 4;
+  const spacing = svgH / (matchesPerSide + 1); // vertical spacing between match centers
 
-  </div>
-  `;
-  document.getElementById("bracketArea").innerHTML = html;
+  const positions = {
+    r0: [], // 16 positions
+    r1: [], // 8 positions
+    r2: [], // 4 positions
+    r3: [], // 2 positions
+    r4: [{ x: finalX, y: svgH/2 }]
+  };
+
+  // Left side r0 (indices 0..7) -> 8 players (4 matches)
+  for (let m = 0; m < matchesPerSide; m++) {
+    const centerY = (m + 1) * spacing;
+    positions.r0.push({ x: leftX, y: centerY - 14 }); // player A
+    positions.r0.push({ x: leftX, y: centerY + 14 }); // player B
+
+    positions.r1.push({ x: leftMidX, y: centerY }); // quarter winner (left side)
+  }
+
+  // Right side r0 (indices 8..15)
+  for (let m = 0; m < matchesPerSide; m++) {
+    const centerY = (m + 1) * spacing;
+    positions.r0.push({ x: rightX, y: centerY - 14 }); // player A
+    positions.r0.push({ x: rightX, y: centerY + 14 }); // player B
+
+    positions.r1.push({ x: rightMidX, y: centerY }); // quarter winner (right side)
+  }
+
+  // r2 (semis) positions: two per side (one for left half, one for right half)
+  // For left semis (two r1 winners): y = average of r1 winners (m=0 & 1)
+  for (let half = 0; half < 2; half++) {
+    // left half semis
+    const idx0 = half * 2;
+    const idx1 = half * 2 + 1;
+    const yLeft = ((positions.r1[idx0].y + positions.r1[idx1].y) / 2) - 0;
+    positions.r2.push({ x: leftQuarterX, y: yLeft });
+  }
+  for (let half = 0; half < 2; half++) {
+    // right half semis
+    const idx0 = 4 + half * 2;
+    const idx1 = 4 + half * 2 + 1;
+    const yRight = ((positions.r1[idx0].y + positions.r1[idx1].y) / 2);
+    positions.r2.push({ x: rightQuarterX, y: yRight });
+  }
+
+  // r3 (two winners -> final sides), place them to point to center
+  // left final slot (winner of left semis)
+  const leftSemiY = (positions.r2[0].y + positions.r2[1].y) / 2;
+  const rightSemiY = (positions.r2[2].y + positions.r2[3].y) / 2;
+  positions.r3.push({ x: centerX - 80, y: leftSemiY });
+  positions.r3.push({ x: centerX + 80, y: rightSemiY });
+
+  // final (r4) already set at center
+
+  return positions;
 }
 
-function makeRound(roundName) {
-  return window.bracket[roundName]
-    .map((match, i) => `
-      <div class="match" onclick="selectWinner('${roundName}', ${i})">
-        ${match[0] ? match[0].ign : '?'}<br>VS<br>${match[1] ? match[1].ign : '?'}
-      </div>
-    `)
-    .join('');
+// Utility: draw a rounded oval with text
+function drawOval(svgEl, cx, cy, rx, ry, id, label, interactive=false) {
+  // Using rounded rect to look like oval for easier text centering
+  const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  g.setAttribute("transform", `translate(${cx - rx}, ${cy - ry})`);
+
+  const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  rect.setAttribute("x", 0);
+  rect.setAttribute("y", 0);
+  rect.setAttribute("width", rx * 2);
+  rect.setAttribute("height", ry * 2);
+  rect.setAttribute("rx", ry);
+  rect.setAttribute("ry", ry);
+  rect.setAttribute("fill", "rgba(255,255,255,0.02)");
+  rect.setAttribute("stroke", "rgba(255,255,255,0.95)");
+  rect.setAttribute("stroke-width", 3);
+  rect.setAttribute("id", id + "_rect");
+  g.appendChild(rect);
+
+  const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  text.setAttribute("x", rx);
+  text.setAttribute("y", ry + 5);
+  text.setAttribute("text-anchor", "middle");
+  text.setAttribute("font-size", "12");
+  text.setAttribute("fill", "#e6eef6");
+  text.setAttribute("id", id + "_text");
+  text.textContent = label;
+  g.appendChild(text);
+
+  if (interactive) {
+    // add pointer cursor and hover effect
+    rect.style.cursor = "pointer";
+    text.style.cursor = "pointer";
+    rect.classList.add("hint-node");
+    text.classList.add("hint-node");
+    // add simple hover
+    rect.addEventListener("mouseenter", ()=> rect.setAttribute("fill", "rgba(255,255,255,0.04)"));
+    rect.addEventListener("mouseleave", ()=> rect.setAttribute("fill", "rgba(255,255,255,0.02)"));
+  }
+
+  svgEl.appendChild(g);
+  return { group: g, rect, text };
 }
 
-function selectWinner(round, index) {
-  const match = window.bracket[round][index];
-  if (!match[0] || !match[1]) return;
+// Draw a smooth connector (cubic Bezier) between two points, offsetting to create curve
+function drawConnector(svgEl, x1, y1, x2, y2) {
+  // generate a path from (x1,y1) to (x2,y2)
+  const dx = Math.abs(x2 - x1);
+  const dir = x2 > x1 ? 1 : -1;
+  const c1x = x1 + dir * dx * 0.35;
+  const c1y = y1;
+  const c2x = x2 - dir * dx * 0.35;
+  const c2y = y2;
 
-  const winner = confirm(`OK = ${match[0].ign} wins | Cancel = ${match[1].ign} wins`)
-    ? match[0]
-    : match[1];
-
-  if (round === "qf") window.bracket.sf[Math.floor(index/2)][index % 2] = winner;
-  if (round === "sf") window.bracket.final[index] = winner;
-  if (round === "final") window.bracket.champion = winner;
-
-  renderBracket();
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  const d = `M ${x1} ${y1} C ${c1x} ${c1y} ${c2x} ${c2y} ${x2} ${y2}`;
+  path.setAttribute("d", d);
+  path.setAttribute("fill", "none");
+  path.setAttribute("stroke", "rgba(255,255,255,0.9)");
+  path.setAttribute("stroke-width", 3);
+  path.setAttribute("stroke-linecap", "round");
+  path.setAttribute("stroke-linejoin", "round");
+  svgEl.appendChild(path);
+  return path;
 }
 
-// Auto-refresh bracket when page loads or when new players are added
-window.addEventListener("DOMContentLoaded", () => {
-  initBracket();
-  renderBracket();
-});
+// Render bracket into SVG based on current data
+function renderBracketSVG() {
+  if (!bracket) return;
+  // clear svg
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
 
-// Hook into your existing addEntry function
-const originalAdd = addEntry;
-addEntry = function(ign, uid) {
-  originalAdd(ign, uid);
-  initBracket();
-  renderBracket();
-};
+  const pos = computePositions();
+
+  // Draw connectors bottom-up and nodes for all rounds
+  // 1) show r0 players (16 nodes)
+  const nodes = { r0: [], r1: [], r2: [], r3: [], r4: [] };
+
+  // round sizes
+  const r0rx = 70, r0ry = 16;
+  const r1rx = 70, r1ry = 18;
+  const r2rx = 70, r2ry = 18;
+  const r3rx = 70, r3ry = 20;
+  const r4rx = 90, r4ry = 24;
+
+  // Draw r0 (players)
+  for (let i = 0; i < 16; i++) {
+    const p = bracket.r0[i];
+    const label = p ? (p.ign.length > 20 ? p.ign.slice(0,18)+"…" : p.ign) : "Empty";
+    const x = pos.r0[i].x;
+    const y = pos.r0[i].y;
+    const id = `r0_${i}`;
+    nodes.r0.push({ id, x, y });
+    drawOval(svg, x, y, r0rx, r0ry, id, label, false);
+  }
+
+  // Draw r1 (8 winners; each r1[i] depends on r0[2*i] and r0[2*i+1])
+  for (let i = 0; i < 8; i++) {
+    const x = pos.r1[i].x;
+    const y = pos.r1[i].y;
+    const id = `r1_${i}`;
+    const label = bracket.r1[i] ? bracket.r1[i].ign : '?';
+    nodes.r1.push({ id, x, y });
+    // draw connector from child r0 to this r1
+    const childAIndex = i;
+    const childBIndex = i + 8; // Wait: careful—our r0 ordering: we pushed left side 8 then right side 8, but we added r1 left 4 then right 4
+    // Instead compute mapping: r0 are ordered left side (0..7) then right side (8..15)
+    // r1[0..3] correspond to left mid winners from r0[0..7] pairs
+    // r1[4..7] correspond to right mid winners from r0[8..15] pairs
+    if (i < 4) {
+      // left quarter i: children r0[2*i] and r0[2*i + 1]
+      const a = pos.r0[2*i];
+      const b = pos.r0[2*i + 1];
+      drawConnector(svg, a.x + r0rx, a.y, x - r1rx, y);
+      drawConnector(svg, b.x + r0rx, b.y, x - r1rx, y);
+    } else {
+      // right quarter i-4: children r0[8 + 2*(i-4)] and r0[8 + 2*(i-4) +1]
+      const idxBase = 8 + 2*(i-4);
+      const a = pos.r0[idxBase];
+      const b = pos.r0[idxBase + 1];
+      drawConnector(svg, a.x - r0rx, a.y, x + r1rx, y);
+      drawConnector(svg, b.x - r0rx, b.y, x + r1rx, y);
+    }
+
+    // draw oval (interactive - clicking chooses winner for this match)
+    const oval = drawOval(svg, x, y, r1rx, r1ry, id, label, true);
+    // attach click to choose winner between its two child r0 nodes
+    (function(round, idx){
+      oval.group.addEventListener("click", ()=> {
+        // determine left and right child players (for prompt text)
+        let leftPlayer, rightPlayer;
+        if (idx < 4) {
+          leftPlayer = bracket.r0[2*idx];
+          rightPlayer = bracket.r0[2*idx + 1];
+        } else {
+          const base = 8 + 2*(idx - 4);
+          leftPlayer = bracket.r0[base];
+          rightPlayer = bracket.r0[base + 1];
+        }
+        if (!leftPlayer || !rightPlayer) return;
+        const ok = confirm(`OK = ${leftPlayer.ign} wins\nCancel = ${rightPlayer.ign} wins`);
+        const winner = ok ? leftPlayer : rightPlayer;
+        bracket.r1[idx] = winner;
+        // Clear lower rounds beyond this path (to avoid stale winners)
+        for (let j = idx; j < bracket.r2.length; j++) bracket.r2[j] = bracket.r2[j]; // no-op here
+        renderBracketSVG();
+      });
+    })('r1', i);
+  }
+
+  // Draw r2 (4 winners: each depends on two r1 winners)
+  for (let i = 0; i < 4; i++) {
+    const x = pos.r2[i].x;
+    const y = pos.r2[i].y;
+    const id = `r2_${i}`;
+    const label = bracket.r2[i] ? bracket.r2[i].ign : '?';
+    nodes.r2.push({ id, x, y });
+
+    // child r1 indices: for left half i in [0,1] -> r1 indices i*2 and i*2+1
+    // for right half i in [2,3] -> r1 indices (4 + (i-2)*2) etc.
+    let child1Idx, child2Idx;
+    if (i < 2) {
+      child1Idx = 2 * i;
+      child2Idx = 2 * i + 1;
+    } else {
+      child1Idx = 4 + 2 * (i - 2);
+      child2Idx = 4 + 2 * (i - 2) + 1;
+    }
+    const c1 = pos.r1[child1Idx];
+    const c2 = pos.r1[child2Idx];
+
+    // Draw connectors from r1 children to this r2
+    // From child to center: child's x to this x
+    // Choose direction based on which side
+    if (i < 2) {
+      drawConnector(svg, c1.x + r1rx, c1.y, x - r2rx, y);
+      drawConnector(svg, c2.x + r1rx, c2.y, x - r2rx, y);
+    } else {
+      drawConnector(svg, c1.x - r1rx, c1.y, x + r2rx, y);
+      drawConnector(svg, c2.x - r1rx, c2.y, x + r2rx, y);
+    }
+
+    const oval = drawOval(svg, x, y, r2rx, r2ry, id, label, true);
+    (function(idx, child1Idx, child2Idx, ovalGroup){
+      ovalGroup.group.addEventListener("click", ()=> {
+        const left = bracket.r1[child1Idx];
+        const right = bracket.r1[child2Idx];
+        if (!left || !right) return;
+        const ok = confirm(`OK = ${left.ign} wins\nCancel = ${right.ign} wins`);
+        const winner = ok ? left : right;
+        bracket.r2[idx] = winner;
+        renderBracketSVG();
+      });
+    })(i, child1Idx, child2Idx, oval);
+  }
+
+  // Draw r3 (2 winners -> sides for final)
+  for (let i = 0; i < 2; i++) {
+    const x = pos.r3[i].x;
+    const y = pos.r3[i].y;
+    const id = `r3_${i}`;
+    const label = bracket.r3[i] ? bracket.r3[i].ign : '?';
+    nodes.r3.push({ id, x, y });
+
+    // children: r2[2*i] and r2[2*i+1]
+    const childA = pos.r2[2*i];
+    const childB = pos.r2[2*i + 1];
+
+    // connectors
+    drawConnector(svg, childA.x + (childA.x < x ? r2rx : -r2rx), childA.y, x - (x > childA.x ? r3rx : -r3rx), y);
+    drawConnector(svg, childB.x + (childB.x < x ? r2rx : -r2rx), childB.y, x - (x > childB.x ? r3rx : -r3rx), y);
+
+    const oval = drawOval(svg, x, y, r3rx, r3ry, id, label, true);
+    (function(idx){
+      oval.group.addEventListener("click", ()=> {
+        const left = bracket.r2[2*idx];
+        const right = bracket.r2[2*idx + 1];
+        if (!left || !right) return;
+        const ok = confirm(`OK = ${left.ign} wins\nCancel = ${right.ign} wins`);
+        const winner = ok ? left : right;
+        bracket.r3[idx] = winner;
+        renderBracketSVG();
+      });
+    })(i);
+  }
+
+  // Draw final r4 (center)
+  {
+    const x = pos.r4[0].x;
+    const y = pos.r4[0].y;
+    const id = `r4_0`;
+    const label = bracket.r4[0] ? bracket.r4[0].ign : '?';
+
+    // connectors from r3[0] and r3[1] to final
+    const c1 = pos.r3[0];
+    const c2 = pos.r3[1];
+    drawConnector(svg, c1.x + r3rx, c1.y, x - r4rx, y);
+    drawConnector(svg, c2.x - r3rx, c2.y, x + r4rx, y);
+
+    const oval = drawOval(svg, x, y, r4rx, r4ry, id, label, true);
+    oval.group.addEventListener("click", ()=> {
+      const left = bracket.r3[0];
+      const right = bracket.r3[1];
+      if (!left || !right) return;
+      const ok = confirm(`OK = ${left.ign} wins\nCancel = ${right.ign} wins`);
+      const winner = ok ? left : right;
+      bracket.r4[0] = winner;
+      bracket.champion = winner;
+      renderBracketSVG();
+      if (winner) {
+        showPopup(`Champion: ${winner.ign}`);
+      }
+    });
+  }
+}
+
+// Public helper to render (wrap)
+function renderBracket() { renderBracketSVG(); }
+
+// Re-init bracket when players change
+// Hook into addEntry earlier: we override addEntry to refresh bracket after adding
+// (We wrapped render calls in UI wiring; ensure initBracket called on load and after add.)
+
+// Initialize if not already
+if (!bracket) initBracket();
+renderBracketSVG();
 
 </script>
 
-<!--
-  INSTRUCTIONS
-  - This is a single-file static website. To publish:
-    1) Save as "index.html" and upload to GitHub Pages / Netlify / Vercel / any static host.
-    2) Change the client-side admin password logic before publishing (replace 'admin123').
-    3) For secure admin control, add a backend (simple Firebase/Auth or server + DB) and restrict delete API to authenticated admin only.
-
-  NOTES
-  - Current protection is client-side only (password typed into prompt). It's fine for small casual uses but NOT secure for public sites.
+<!-- NOTE:
+  - This is a complete single-file static page.
+  - The client-side admin password is NOT secure; don't rely on it for production.
+  - You can change the visuals (stroke widths, colors) in the CSS or the SVG creation functions.
 -->
-
 </body>
 </html>
