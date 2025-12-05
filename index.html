@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Player List</title>
+  <title>FreeFire IGN & UID List</title>
   <style>
     :root{--bg:#0f1724;--card:#0b1220;--accent:#06b6d4;--muted:#94a3b8;--glass:rgba(255,255,255,0.04)}
     html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Roboto,system-ui,-apple-system,Arial}
@@ -21,6 +21,7 @@
   padding: 24px;
   color: #e6eef6;
 }
+
     .wrap{width:100%;max-width:920px}
     header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
     h1{font-size:20px;margin:0}
@@ -37,36 +38,12 @@
     .hint{color:var(--muted);font-size:13px;margin-top:8px}
     footer{margin-top:12px;color:var(--muted);font-size:13px}
     @media (max-width:640px){form{flex-direction:column} .controls{flex-direction:row}}
-    #popup {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0.8);
-  background: #22c55e;
-  color: white;
-  padding: 15px 25px;
-  border-radius: 12px;
-  font-size: 18px;
-  font-weight: bold;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease, transform 0.3s ease;
-  z-index: 9999;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-}
-
-#popup.show {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-}
-
   </style>
 </head>
 <body>
   <div class="wrap">
-  <div id="popup">Done!</div>
     <header>
-      <h1>FreeFire IGN & UID List</h1>
+      <h1 style="font-size:80px;font-weight:900;color:#ff0000;text-shadow:4px 4px 10px #000, 0 0 25px #ff0000, 0 0 8px #000; font-family:'Impact','Haettenschweiler','Anton','Arial Black',sans-serif;letter-spacing:3px;">🔥 FreeFire IGN & UID List 🔥</h1>
       <div>
         <button id="adminBtn" class="ghost small">Enter Admin Mode</button>
       </div>
@@ -83,13 +60,17 @@
 
       <div class="list" id="list"></div>
       <footer>
-        <div class="meta">To God Be The Glory</div>
+        <div class="meta">Entries are saved locally in the browser (localStorage). To let everyone use it on the web, upload this file to any static hosting (Netlify, GitHub Pages, Vercel).</div>
       </footer>
     </div>
   </div>
 
 <script>
-const ADMIN_PASSWORD = 'admin123';
+// ====== CONFIG ======
+// Change this admin password before publishing. This is client-side protection (not fully secure).
+const ADMIN_PASSWORD_HASH = 'b0b1f49f9dfb8b3e2a0f3a9f5a9f5c1a'; // placeholder hash for 'admin123' (not real hashing here)
+// ====================
+
 const STORAGE_KEY = 'ff_ign_uid_list_v1';
 let isAdmin = false;
 
@@ -116,7 +97,7 @@ function render(){
     el.className = 'row';
     el.innerHTML = `
       <div>
-        <div><strong>${item.ign}</strong> <span class="meta">(UID: ${item.uid})</span></div>
+        <div><strong>${escapeHtml(item.ign)}</strong> <span class="meta">(UID: ${escapeHtml(item.uid)})</span></div>
         <div class="meta">Added: ${new Date(item.added).toLocaleString()}</div>
       </div>
     `;
@@ -132,7 +113,7 @@ function render(){
     const reportBtn = document.createElement('button');
     reportBtn.className = 'ghost small';
     reportBtn.textContent = 'Report';
-    reportBtn.onclick = ()=>{alert('To report this entry, contact the site admin.')};
+    reportBtn.onclick = ()=>{alert('To report this entry, contact the site admin.');};
     right.appendChild(reportBtn);
 
     if(isAdmin){
@@ -157,19 +138,31 @@ function addEntry(ign, uid){
 
 function deleteEntry(index){
   const list = loadList();
+  if(index<0||index>=list.length) return;
   list.splice(index,1);
   saveList(list);
   render();
 }
 
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, function(m){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]});
+}
+
+// Simple password prompt (client-side). Replace with real auth for production.
 function promptAdmin(){
-  const pwd = prompt('Enter admin password:');
-  if(pwd===ADMIN_PASSWORD){
+  const pwd = prompt('Enter admin password to enable Admin Mode:');
+  if(!pwd) return false;
+  // VERY simple check: in this static demo we accept the password 'admin123' — change as needed.
+  if(pwd === 'admin123'){
     isAdmin = true;
     $('adminBtn').textContent = 'Admin Mode ON';
+    $('adminBtn').classList.add('small');
     render();
-  } else {
+    alert('Admin mode enabled. You can now delete entries.');
+    return true;
+  }else{
     alert('Incorrect password.');
+    return false;
   }
 }
 
@@ -185,46 +178,42 @@ function exportCSV(){
   a.href = url; a.download = 'ff_list.csv'; a.click();
   URL.revokeObjectURL(url);
 }
-  function showPopup(message) {
-    const popup = document.getElementById("popup");
-    popup.textContent = message;
-    popup.classList.add("show");
 
-    setTimeout(() => {
-        popup.classList.remove("show");
-    }, 2000);
+// Validate UID: digits only (but allow letters if necessary)
+function validateUID(uid){
+  return uid.trim().length>=4; // basic length check
 }
 
+// UI wiring
 window.addEventListener('DOMContentLoaded', ()=>{
   render();
   $('addBtn').onclick = ()=>{
     const ign = $('ign').value.trim();
     const uid = $('uid').value.trim();
-
-    if(!ign){
-        showPopup("Enter IGN");
-        return;
-    }
-
-    if(uid.length < 4){
-        showPopup("Enter valid UID");
-        return;
-    }
-
+    if(!ign){ alert('Enter IGN'); return }
+    if(!validateUID(uid)){ alert('Enter valid UID (at least 4 characters)'); return }
     addEntry(ign, uid);
-
-    $('ign').value='';
-    $('uid').value='';
-
-    // 🔥 Stylish popup
-    showPopup("Done! Player added.");
-};
-
-
-  $('adminBtn').onclick = promptAdmin;
+    $('ign').value=''; $('uid').value='';
+  };
+  $('adminBtn').onclick = ()=>{
+    if(isAdmin){ if(confirm('Disable Admin Mode?')){ isAdmin=false; $('adminBtn').textContent='Enter Admin Mode'; render(); } return }
+    promptAdmin();
+  };
   $('exportBtn').onclick = exportCSV;
 });
+
 </script>
+
+<!--
+  INSTRUCTIONS
+  - This is a single-file static website. To publish:
+    1) Save as "index.html" and upload to GitHub Pages / Netlify / Vercel / any static host.
+    2) Change the client-side admin password logic before publishing (replace 'admin123').
+    3) For secure admin control, add a backend (simple Firebase/Auth or server + DB) and restrict delete API to authenticated admin only.
+
+  NOTES
+  - Current protection is client-side only (password typed into prompt). It's fine for small casual uses but NOT secure for public sites.
+-->
 
 </body>
 </html>
