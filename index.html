@@ -175,7 +175,7 @@ function escapeHtml(s){
 function promptAdmin(){
   const pwd = prompt('Enter admin password to enable Admin Mode:');
   if(!pwd) return false;
-  // VERY simple check: 
+
   if(pwd === 'spannerboss'){
     isAdmin = true;
     $('adminBtn').textContent = 'Admin Mode ON';
@@ -188,6 +188,7 @@ function promptAdmin(){
     return false;
   }
 }
+
 
 function exportCSV(){
   const list = loadList();
