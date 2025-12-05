@@ -3,43 +3,26 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>FreeFire IGN & UID List + 16-player Bracket</title>
-  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
+  <title>FreeFire IGN & UID List + 16-player Bracket (Firebase)</title>
 
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyB0A32fryMT8R_H0wKoLTBUcfwAV6va7Z8",
-  authDomain: "freefire-f9017.firebaseapp.com",
-  projectId: "freefire-f9017",
-  storageBucket: "freefire-f9017.firebasestorage.app",
-  messagingSenderId: "577510489288",
-  appId: "1:577510489288:web:3a665dd49f325ccff7b9fd"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = firebase.database();
-</script>
+  <!-- Firebase (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
 
   <style>
     :root{--bg:#0f1724;--card:#0b1220;--accent:#06b6d4;--muted:#94a3b8;--glass:rgba(255,255,255,0.04)}
     html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Roboto,system-ui,-apple-system,Arial}
     body {
-  background: url("https://i.imgur.com/3S4d2Ns.png") no-repeat center center fixed;
-  background-size: cover;
+      background: url("https://i.imgur.com/3S4d2Ns.png") no-repeat center center fixed;
+      background-size: cover;
+      display: block;
+      min-height: 100vh;
+      margin: 0;
+      padding: 24px;
+      color: #e6eef6;
+    }
 
-  /* REMOVE vertical centering */
-  display: block;
-
-  min-height: 100vh;
-  margin: 0;
-  padding: 24px;
-  color: #e6eef6;
-}
-
-
-    .wrap{width:100%;max-width:1100px}
+    .wrap{width:100%;max-width:1100px;margin:0 auto}
     header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
     h1{font-size:20px;margin:0}
     .card{background:var(--card);padding:18px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
@@ -79,19 +62,18 @@ const db = firebase.database();
       transform: translate(-50%, -50%) scale(1);
     }
 
-    /* Bracket card adjustments */
     .bracket-card { margin-top: 24px; padding: 18px; border-radius: 12px; background: rgba(255,255,255,0.02); }
     #bracketContainer { width: 100%; overflow-x: auto; padding: 10px 0; }
-    /* Center small caption under bracket for mobile */
     .bracket-caption { color: var(--muted); font-size: 13px; margin-top: 8px; text-align:center; }
 
-    /* Small tooltip style when hovering interactive nodes */
+    /* SVG oval hover */
     .hint-node { cursor: pointer; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div id="popup">Done!</div>
+
     <header>
       <h1 style="font-size:48px;font-weight:900;color:#ff0000;text-shadow:4px 4px 10px #000, 0 0 25px #ff0000, 0 0 8px #000; font-family:'Impact','Haettenschweiler','Anton','Arial Black',sans-serif;letter-spacing:3px;">
         🔥 FreeFire IGN & UID List 🔥
@@ -115,342 +97,330 @@ const db = firebase.database();
         <div class="meta">TO GOD BE THE GLORY.</div>
       </footer>
 
-      <!-- BRACKET SECTION -->
+      <!-- BRACKET -->
       <div class="bracket-card">
         <h2 style="margin:0 0 10px 0;">🏆 16-Player Tournament Bracket (Medium)</h2>
         <div id="bracketContainer">
-          <!-- SVG inserted here by JS -->
           <svg id="bracketSvg" width="900" height="520" viewBox="0 0 900 520" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg>
         </div>
-        <div class="bracket-caption">Click the match bubble in the next round to choose the winner (OK = left, Cancel = right).</div>
+        <div class="bracket-caption">Click the match bubble in the next round to choose the winner (OK = left, Cancel = right). Winners are saved to Firebase so everyone sees the same bracket.</div>
       </div>
     </div>
   </div>
 
 <script>
-// ====== CONFIG ======
-// Change this admin password before publishing. This is client-side protection (not fully secure).
-const ADMIN_PASSWORD_HASH = 'b0b1f49f9dfb8b3e2a0f3a9f5a9f5c1a'; // placeholder
-// ====================
+/* ===== FIREBASE CONFIG =====
+   Replace these values if you want another Firebase project.
+*/
+const firebaseConfig = {
+  apiKey: "AIzaSyB0A32fryMT8R_H0wKoLTBUcfwAV6va7Z8",
+  authDomain: "freefire-f9017.firebaseapp.com",
+  databaseURL: "https://freefire-f9017-default-rtdb.firebaseio.com",
+  projectId: "freefire-f9017",
+  storageBucket: "freefire-f9017.appspot.com",
+  messagingSenderId: "577510489288",
+  appId: "1:577510489288:web:3a665dd49f325ccff7b9fd"
+};
 
-const STORAGE_KEY = 'ff_ign_uid_list_v1';
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const STORAGE_KEY = 'ff_ign_uid_list_v1'; // not used for persistence now (we use Firebase)
 let isAdmin = false;
-
 function $(id){return document.getElementById(id)}
-
-function loadList(callback){
-  db.ref("players").on("value", snapshot => {
-    const data = snapshot.val() || [];
-    callback(data);
-  });
-}
-
-function addEntry(ign, uid){
-  const entry = { ign, uid, added: Date.now() };
-  db.ref("players").push(entry);
-}
-
-function deleteEntry(id){
-  db.ref("players/" + id).remove();
-}
-
-function render(){
-  db.ref("players").once("value", snapshot => {
-    const data = snapshot.val() || {};
-    const list = Object.entries(data).map(([id, item]) => ({ id, ...item }));
-
-    const container = $('list');
-    container.innerHTML = '';
-
-    if(list.length === 0){
-      container.innerHTML = '<div class="meta">No entries yet.</div>';
-      return;
-    }
-
-    list.forEach(item => {
-      const el = document.createElement('div');
-      el.className = 'row';
-
-      el.innerHTML = `
-        <div>
-          <strong>${escapeHtml(item.ign)}</strong>
-          <span class="meta">(UID: ${escapeHtml(item.uid)})</span>
-          <div class="meta">Added: ${new Date(item.added).toLocaleString()}</div>
-        </div>
-        <div class="controls"></div>
-      `;
-
-      const controls = el.querySelector(".controls");
-
-      const copyBtn = document.createElement("button");
-      copyBtn.className = "ghost small";
-      copyBtn.textContent = "Copy";
-      copyBtn.onclick = () =>
-        navigator.clipboard.writeText(`${item.ign} | ${item.uid}`);
-      controls.appendChild(copyBtn);
-
-      const reportBtn = document.createElement("button");
-      reportBtn.className = "ghost small";
-      reportBtn.textContent = "Report";
-      controls.appendChild(reportBtn);
-
-      if(isAdmin){
-        const del = document.createElement("button");
-        del.className = "small";
-        del.textContent = "Delete";
-        del.onclick = () => deleteEntry(item.id);
-        controls.appendChild(del);
-      }
-
-      container.appendChild(el);
-    });
-
-    // Refresh bracket because player list changed
-    initBracket();
-    renderBracketSVG();
-
-  });
-}
-  db.ref("players").on("value", () => {
-  render();
-});
-
-
-function addEntry(ign, uid){
-  const list = loadList();
-  list.unshift({ign:ign, uid:uid, added:Date.now()});
-  saveList(list);
-  render();
-}
-
-function deleteEntry(index){
-  const list = loadList();
-  if(index<0||index>=list.length) return;
-  list.splice(index,1);
-  saveList(list);
-  render();
-}
-
-function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g, function(m){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]});
-}
-
-// Simple password prompt (client-side). Replace with real auth for production.
-function promptAdmin(){
-  const pwd = prompt('Enter admin password to enable Admin Mode:');
-  if(!pwd) return false;
-
-  if(pwd === 'spannerboss'){
-    isAdmin = true;
-    $('adminBtn').textContent = 'Admin Mode ON';
-    $('adminBtn').classList.add('small');
-    render();
-    alert('Admin mode enabled. You can now delete entries.');
-    return true;
-  }else{
-    alert('Incorrect password.');
-    return false;
-  }
-}
-
-
-function exportCSV(){
-  const list = loadList();
-  if(list.length===0){ alert('No entries to export.'); return }
-  const rows = [['IGN','UID','Added']];
-  list.forEach(r=> rows.push([r.ign,r.uid,new Date(r.added).toLocaleString()]));
-  const csv = rows.map(r=> r.map(c=> '"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
-  const blob = new Blob([csv],{type:'text/csv'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'ff_list.csv'; a.click();
-  URL.revokeObjectURL(url);
-}
-
-// Validate UID: digits only (but allow letters if necessary)
-function validateUID(uid){
-  return uid.trim().length>=4; // basic length check
-}
 function showPopup(message) {
-  const popup = document.getElementById("popup");
+  const popup = $('popup');
   popup.textContent = message;
   popup.classList.add("show");
+  setTimeout(()=> popup.classList.remove("show"), 1800);
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=> ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"})[m]); }
 
-  setTimeout(() => {
-      popup.classList.remove("show");
-  }, 2000);
+/* ===== PLAYER LIST (Firebase) ===== */
+
+// Subscribe and render list when players change
+function subscribePlayersAndRender() {
+  db.ref('players').on('value', snapshot => {
+    const data = snapshot.val() || {};
+    // Convert to array preserving push order by key insertion (Object.values is fine for this purpose)
+    const list = Object.entries(data).map(([key, val]) => ({ id: key, ...val }));
+    renderPlayerList(list);
+    // Update bracket.r0 based on current players (first 16)
+    updateBracketR0(list);
+  });
 }
 
-// UI wiring
-window.addEventListener('DOMContentLoaded', ()=>{
-  render();
-  initBracket(); // initialize bracket with current players
-  renderBracketSVG();
+function renderPlayerList(list) {
+  const container = $('list');
+  container.innerHTML = '';
+  if(list.length === 0) {
+    container.innerHTML = '<div class="meta">No entries yet. Be the first!</div>';
+    return;
+  }
+  // newest first (optional): reverse list so newest appear top
+  list.slice().reverse().forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'row';
+    el.innerHTML = `
+      <div>
+        <strong>${escapeHtml(item.ign)}</strong>
+        <span class="meta">(UID: ${escapeHtml(item.uid)})</span>
+        <div class="meta">Added: ${new Date(item.added).toLocaleString()}</div>
+      </div>
+      <div class="controls"></div>
+    `;
+    const controls = el.querySelector('.controls');
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'ghost small';
+    copyBtn.textContent = 'Copy';
+    copyBtn.onclick = ()=> navigator.clipboard.writeText(`${item.ign} | ${item.uid}`);
+    controls.appendChild(copyBtn);
 
-  $('addBtn').onclick = ()=>{
-    const ign = $('ign').value.trim();
-    const uid = $('uid').value.trim();
+    const reportBtn = document.createElement('button');
+    reportBtn.className = 'ghost small';
+    reportBtn.textContent = 'Report';
+    reportBtn.onclick = ()=> alert('To report this entry, contact the site admin.');
+    controls.appendChild(reportBtn);
 
-    if(!ign){
-        showPopup("Enter IGN");
-        return;
+    if(isAdmin) {
+      const del = document.createElement('button');
+      del.className = 'small';
+      del.textContent = 'Delete';
+      del.onclick = ()=> {
+        if(confirm('Delete this entry?')) db.ref('players/' + item.id).remove();
+      };
+      controls.appendChild(del);
     }
 
-    if(uid.length < 4){
-        showPopup("Enter valid UID");
-        return;
-    }
+    container.appendChild(el);
+  });
+}
 
-    addEntry(ign, uid);
+function addPlayerToFirebase(ign, uid) {
+  const entry = { ign, uid, added: Date.now() };
+  db.ref('players').push(entry);
+}
 
-    $('ign').value='';
-    $('uid').value='';
+/* ===== BRACKET: store winners in Firebase so everyone shares same state =====
+   Data structure under "bracket":
+   - r0: array[16] (player objects used for UI read-only)
+   - r1: array[8] of winner player objects (or null)
+   - r2: array[4]
+   - r3: array[2]
+   - r4: array[1]
+   - champion: winner object or null
+*/
 
-    // Refresh bracket (auto-fill)
-    initBracket();
-    renderBracketSVG();
-
-    showPopup("Done! Player added.");
-  };
-
-  $('adminBtn').onclick = ()=>{
-    if(isAdmin){ if(confirm('Disable Admin Mode?')){ isAdmin=false; $('adminBtn').textContent='Enter Admin Mode'; render(); } return }
-    promptAdmin();
-  };
-  $('exportBtn').onclick = exportCSV;
-});
-
-/* =========================
-   SVG BRACKET (16 players)
-   ========================= */
-
-let bracket = null; // data structure to hold players/winners
-
-// Generate coordinates for medium size SVG (900x520)
-const svgW = 900;
-const svgH = 520;
 const svg = $('bracketSvg');
+const svgW = 900, svgH = 520;
 
-// Build bracket data from player list (first 16)
-function generatePlayersArray() {
-  function getBracketPlayers(callback){
-  db.ref("players")
-    .limitToFirst(16)
-    .once("value", snapshot => {
-      const data = snapshot.val() || {};
-      const list = Object.values(data);
-      while(list.length < 16) list.push({ ign:"Empty", uid:"-" });
-      callback(list);
-    });
-}
-  // ensure exactly 16 entries (pad)
-  while (players.length < 16) players.push({ ign: "Empty", uid: "—" });
-  return players;
-}
-
-// Initialize bracket rounds (r0: initial 16 players as 8 pairs on left+right)
-// r0: 16 players (indices 0..15), r1: 8 winners (matches: pairs of r0), r2: 4 winners, r3: 2 winners, r4: final winner (1)
-function initBracket(){
-  getBracketPlayers(players => {
-    bracket = {
-      r0: players,
+let bracketLocal = null; // local copy
+function initBracketInFirebaseIfMissing() {
+  db.ref('bracket').once('value').then(snap => {
+    if (snap.exists()) {
+      // nothing to create
+      return;
+    }
+    // create initial empty structure (r0 will be updated automatically from players)
+    const empty = {
+      r0: new Array(16).fill(null),
       r1: new Array(8).fill(null),
       r2: new Array(4).fill(null),
       r3: new Array(2).fill(null),
       r4: new Array(1).fill(null),
       champion: null
     };
+    db.ref('bracket').set(empty);
+  });
+}
+
+// Subscribe to bracket changes
+function subscribeBracketAndRender() {
+  db.ref('bracket').on('value', snap => {
+    bracketLocal = snap.val() || {};
+    // Ensure r0 length is 16
+    bracketLocal.r0 = bracketLocal.r0 || new Array(16).fill(null);
+    bracketLocal.r1 = bracketLocal.r1 || new Array(8).fill(null);
+    bracketLocal.r2 = bracketLocal.r2 || new Array(4).fill(null);
+    bracketLocal.r3 = bracketLocal.r3 || new Array(2).fill(null);
+    bracketLocal.r4 = bracketLocal.r4 || new Array(1).fill(null);
     renderBracketSVG();
   });
 }
 
+// Update bracket.r0 from players list (first 16)
+function updateBracketR0(playersList) {
+  // playersList is array newest-first? Our subscribe passed Object.entries -> map in insertion order.
+  // We want the first 16 by insertion order (oldest->newest) or maybe newest? We'll pick newest-first as the UI uses unshift earlier.
+  // To be explicit: take first 16 entries from playersList (which was returned in push order). If fewer than 16, pad.
+  const players = (playersList || []).slice(0,16).map(p => ({ ign: p.ign, uid: p.uid }));
+  while (players.length < 16) players.push({ ign: "Empty", uid: "-" });
+  // write to firebase r0
+  db.ref('bracket/r0').set(players);
+}
 
-// Calculate positions for each round and draw
+// Helper: set winner in firebase and clear dependent slots downstream
+// roundName: 'r1'|'r2'|'r3'|'r4', index is integer (0-based)
+// winner is { ign, uid } object
+function setWinnerAndClearDownstream(roundName, index, winner) {
+  // Write winner
+  db.ref(`bracket/${roundName}/${index}`).set(winner);
+
+  // Determine dependent downstream keys to clear:
+  // If roundName === 'r1', then it affects r2, r3, r4 possibly.
+  // Approach: compute mapping of dependencies and clear any descendant slots that depend on this match.
+  // Simpler: when a winner in r1 changes, we clear all rounds below that could include it.
+  const clears = [];
+  if (roundName === 'r1') {
+    // which r2 index does this feed? r2 indices:
+    // r2[0] depends on r1[0],r1[1]
+    // r2[1] depends on r1[2],r1[3]
+    // r2[2] depends on r1[4],r1[5]
+    // r2[3] depends on r1[6],r1[7]
+    const r2index = Math.floor(index/2);
+    clears.push(`r2/${r2index}`);
+    // clear r3 that depends on that r2 (each r3 depends on two r2)
+    const r3index = Math.floor(r2index/2);
+    clears.push(`r3/${r3index}`);
+    // clear final and champion
+    clears.push(`r4/0`);
+    clears.push(`champion`);
+  } else if (roundName === 'r2') {
+    const r3index = Math.floor(index/2);
+    clears.push(`r3/${r3index}`);
+    clears.push(`r4/0`);
+    clears.push(`champion`);
+  } else if (roundName === 'r3') {
+    clears.push(`r4/0`);
+    clears.push(`champion`);
+  } else if (roundName === 'r4') {
+    clears.push(`champion`);
+  }
+
+  // Clear listed paths (set to null)
+  const updates = {};
+  clears.forEach(path => updates[path] = null);
+  // apply updates after setting winner (use update so winner set + clears happen)
+  db.ref('bracket').update(updates);
+}
+
+// Click handlers when user chooses winner (we compute left/right children from bracket.r0 & winners)
+function pickWinnerForR1(idx) {
+  // r1 match corresponds to two players in r0:
+  // r1[0..3] -> left side, children r0[0..7] by pairs
+  // r1[4..7] -> right side, children r0[8..15] by pairs
+  const r0 = bracketLocal.r0 || [];
+  let left, right;
+  if (idx < 4) {
+    left = r0[2*idx];
+    right = r0[2*idx + 1];
+  } else {
+    const base = 8 + 2*(idx - 4);
+    left = r0[base];
+    right = r0[base + 1];
+  }
+  if (!left || !right) return;
+  const ok = confirm(`OK = ${left.ign} wins\nCancel = ${right.ign} wins`);
+  const winner = ok ? left : right;
+  setWinnerAndClearDownstream('r1', idx, winner);
+}
+
+function pickWinnerForR2(idx) {
+  const r1 = bracketLocal.r1 || [];
+  let left, right;
+  if (idx < 2) {
+    left = r1[2*idx];
+    right = r1[2*idx + 1];
+  } else {
+    left = r1[4 + 2*(idx-2)];
+    right = r1[4 + 2*(idx-2) + 1];
+  }
+  if (!left || !right) return;
+  const ok = confirm(`OK = ${left.ign} wins\nCancel = ${right.ign} wins`);
+  const winner = ok ? left : right;
+  setWinnerAndClearDownstream('r2', idx, winner);
+}
+
+function pickWinnerForR3(idx) {
+  const r2 = bracketLocal.r2 || [];
+  const left = r2[2*idx];
+  const right = r2[2*idx + 1];
+  if (!left || !right) return;
+  const ok = confirm(`OK = ${left.ign} wins\nCancel = ${right.ign} wins`);
+  const winner = ok ? left : right;
+  setWinnerAndClearDownstream('r3', idx, winner);
+}
+
+function pickWinnerForR4(idx) {
+  const r3 = bracketLocal.r3 || [];
+  const left = r3[0];
+  const right = r3[1];
+  if (!left || !right) return;
+  const ok = confirm(`OK = ${left.ign} wins\nCancel = ${right.ign} wins`);
+  const winner = ok ? left : right;
+  // Setting r4[0] and champion
+  db.ref('bracket/r4/0').set(winner);
+  db.ref('bracket/champion').set(winner);
+}
+
+/* ===== SVG drawing utilities (same visual style you asked for) ===== */
+
 function computePositions() {
-  // left side: 8 players -> 4 matches
-  // right side: 8 players -> 4 matches
   const leftX = 60;
   const leftMidX = 220;
   const leftQuarterX = 380;
-
   const rightX = svgW - 60;
   const rightMidX = svgW - 220;
   const rightQuarterX = svgW - 380;
-
   const finalX = svgW/2;
   const centerX = svgW/2;
 
   const matchesPerSide = 4;
-  const spacing = svgH / (matchesPerSide + 1); // vertical spacing between match centers
+  const spacing = svgH / (matchesPerSide + 1);
 
-  const positions = {
-    r0: [], // 16 positions
-    r1: [], // 8 positions
-    r2: [], // 4 positions
-    r3: [], // 2 positions
-    r4: [{ x: finalX, y: svgH/2 }]
-  };
+  const positions = { r0: [], r1: [], r2: [], r3: [], r4: [{ x: finalX, y: svgH/2 }] };
 
-  // Left side r0 (indices 0..7) -> 8 players (4 matches)
   for (let m = 0; m < matchesPerSide; m++) {
     const centerY = (m + 1) * spacing;
-    positions.r0.push({ x: leftX, y: centerY - 14 }); // player A
-    positions.r0.push({ x: leftX, y: centerY + 14 }); // player B
-
-    positions.r1.push({ x: leftMidX, y: centerY }); // quarter winner (left side)
+    positions.r0.push({ x: leftX, y: centerY - 14 });
+    positions.r0.push({ x: leftX, y: centerY + 14 });
+    positions.r1.push({ x: leftMidX, y: centerY });
   }
-
-  // Right side r0 (indices 8..15)
   for (let m = 0; m < matchesPerSide; m++) {
     const centerY = (m + 1) * spacing;
-    positions.r0.push({ x: rightX, y: centerY - 14 }); // player A
-    positions.r0.push({ x: rightX, y: centerY + 14 }); // player B
-
-    positions.r1.push({ x: rightMidX, y: centerY }); // quarter winner (right side)
+    positions.r0.push({ x: rightX, y: centerY - 14 });
+    positions.r0.push({ x: rightX, y: centerY + 14 });
+    positions.r1.push({ x: rightMidX, y: centerY });
   }
 
-  // r2 (semis) positions: two per side (one for left half, one for right half)
-  // For left semis (two r1 winners): y = average of r1 winners (m=0 & 1)
   for (let half = 0; half < 2; half++) {
-    // left half semis
     const idx0 = half * 2;
     const idx1 = half * 2 + 1;
-    const yLeft = ((positions.r1[idx0].y + positions.r1[idx1].y) / 2) - 0;
+    const yLeft = ((positions.r1[idx0].y + positions.r1[idx1].y) / 2);
     positions.r2.push({ x: leftQuarterX, y: yLeft });
   }
   for (let half = 0; half < 2; half++) {
-    // right half semis
     const idx0 = 4 + half * 2;
     const idx1 = 4 + half * 2 + 1;
     const yRight = ((positions.r1[idx0].y + positions.r1[idx1].y) / 2);
     positions.r2.push({ x: rightQuarterX, y: yRight });
   }
 
-  // r3 (two winners -> final sides), place them to point to center
-  // left final slot (winner of left semis)
   const leftSemiY = (positions.r2[0].y + positions.r2[1].y) / 2;
   const rightSemiY = (positions.r2[2].y + positions.r2[3].y) / 2;
   positions.r3.push({ x: centerX - 80, y: leftSemiY });
   positions.r3.push({ x: centerX + 80, y: rightSemiY });
 
-  // final (r4) already set at center
-
   return positions;
 }
 
-// Utility: draw a rounded oval with text
 function drawOval(svgEl, cx, cy, rx, ry, id, label, interactive=false) {
-  // Using rounded rect to look like oval for easier text centering
   const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
   g.setAttribute("transform", `translate(${cx - rx}, ${cy - ry})`);
-
   const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-  rect.setAttribute("x", 0);
-  rect.setAttribute("y", 0);
-  rect.setAttribute("width", rx * 2);
-  rect.setAttribute("height", ry * 2);
-  rect.setAttribute("rx", ry);
-  rect.setAttribute("ry", ry);
+  rect.setAttribute("x", 0); rect.setAttribute("y", 0);
+  rect.setAttribute("width", rx*2); rect.setAttribute("height", ry*2);
+  rect.setAttribute("rx", ry); rect.setAttribute("ry", ry);
   rect.setAttribute("fill", "rgba(255,255,255,0.02)");
   rect.setAttribute("stroke", "rgba(255,255,255,0.95)");
   rect.setAttribute("stroke-width", 3);
@@ -458,22 +428,16 @@ function drawOval(svgEl, cx, cy, rx, ry, id, label, interactive=false) {
   g.appendChild(rect);
 
   const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-  text.setAttribute("x", rx);
-  text.setAttribute("y", ry + 5);
+  text.setAttribute("x", rx); text.setAttribute("y", ry + 5);
   text.setAttribute("text-anchor", "middle");
   text.setAttribute("font-size", "12");
   text.setAttribute("fill", "#e6eef6");
-  text.setAttribute("id", id + "_text");
   text.textContent = label;
   g.appendChild(text);
 
   if (interactive) {
-    // add pointer cursor and hover effect
     rect.style.cursor = "pointer";
     text.style.cursor = "pointer";
-    rect.classList.add("hint-node");
-    text.classList.add("hint-node");
-    // add simple hover
     rect.addEventListener("mouseenter", ()=> rect.setAttribute("fill", "rgba(255,255,255,0.04)"));
     rect.addEventListener("mouseleave", ()=> rect.setAttribute("fill", "rgba(255,255,255,0.02)"));
   }
@@ -482,16 +446,13 @@ function drawOval(svgEl, cx, cy, rx, ry, id, label, interactive=false) {
   return { group: g, rect, text };
 }
 
-// Draw a smooth connector (cubic Bezier) between two points, offsetting to create curve
 function drawConnector(svgEl, x1, y1, x2, y2) {
-  // generate a path from (x1,y1) to (x2,y2)
   const dx = Math.abs(x2 - x1);
   const dir = x2 > x1 ? 1 : -1;
   const c1x = x1 + dir * dx * 0.35;
   const c1y = y1;
   const c2x = x2 - dir * dx * 0.35;
   const c2y = y2;
-
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   const d = `M ${x1} ${y1} C ${c1x} ${c1y} ${c2x} ${c2y} ${x2} ${y2}`;
   path.setAttribute("d", d);
@@ -504,114 +465,52 @@ function drawConnector(svgEl, x1, y1, x2, y2) {
   return path;
 }
 
-// Render bracket into SVG based on current data
 function renderBracketSVG() {
-  if (!bracket) return;
-  // clear svg
+  if (!bracketLocal) return;
   while (svg.firstChild) svg.removeChild(svg.firstChild);
 
   const pos = computePositions();
-
-  // Draw connectors bottom-up and nodes for all rounds
-  // 1) show r0 players (16 nodes)
-  const nodes = { r0: [], r1: [], r2: [], r3: [], r4: [] };
-
-  // round sizes
   const r0rx = 70, r0ry = 16;
   const r1rx = 70, r1ry = 18;
   const r2rx = 70, r2ry = 18;
   const r3rx = 70, r3ry = 20;
   const r4rx = 90, r4ry = 24;
 
-  // Draw r0 (players)
+  // draw r0
   for (let i = 0; i < 16; i++) {
-    const p = bracket.r0[i];
-    const label = p ? (p.ign.length > 20 ? p.ign.slice(0,18)+"…" : p.ign) : "Empty";
-    const x = pos.r0[i].x;
-    const y = pos.r0[i].y;
-    const id = `r0_${i}`;
-    nodes.r0.push({ id, x, y });
-    drawOval(svg, x, y, r0rx, r0ry, id, label, false);
+    const p = (bracketLocal.r0 && bracketLocal.r0[i]) || { ign: "Empty", uid: "-" };
+    const label = p.ign && p.ign.length > 20 ? p.ign.slice(0,18) + "…" : (p.ign || "Empty");
+    drawOval(svg, pos.r0[i].x, pos.r0[i].y, r0rx, r0ry, `r0_${i}`, label, false);
   }
 
-  // Draw r1 (8 winners; each r1[i] depends on r0[2*i] and r0[2*i+1])
+  // draw r1
   for (let i = 0; i < 8; i++) {
-    const x = pos.r1[i].x;
-    const y = pos.r1[i].y;
-    const id = `r1_${i}`;
-    const label = bracket.r1[i] ? bracket.r1[i].ign : '?';
-    nodes.r1.push({ id, x, y });
-    // draw connector from child r0 to this r1
-    const childAIndex = i;
-    const childBIndex = i + 8; // Wait: careful—our r0 ordering: we pushed left side 8 then right side 8, but we added r1 left 4 then right 4
-    // Instead compute mapping: r0 are ordered left side (0..7) then right side (8..15)
-    // r1[0..3] correspond to left mid winners from r0[0..7] pairs
-    // r1[4..7] correspond to right mid winners from r0[8..15] pairs
+    const x = pos.r1[i].x, y = pos.r1[i].y;
+    // connectors from children
     if (i < 4) {
-      // left quarter i: children r0[2*i] and r0[2*i + 1]
-      const a = pos.r0[2*i];
-      const b = pos.r0[2*i + 1];
+      const a = pos.r0[2*i], b = pos.r0[2*i+1];
       drawConnector(svg, a.x + r0rx, a.y, x - r1rx, y);
       drawConnector(svg, b.x + r0rx, b.y, x - r1rx, y);
     } else {
-      // right quarter i-4: children r0[8 + 2*(i-4)] and r0[8 + 2*(i-4) +1]
-      const idxBase = 8 + 2*(i-4);
-      const a = pos.r0[idxBase];
-      const b = pos.r0[idxBase + 1];
+      const base = 8 + 2*(i-4);
+      const a = pos.r0[base], b = pos.r0[base+1];
       drawConnector(svg, a.x - r0rx, a.y, x + r1rx, y);
       drawConnector(svg, b.x - r0rx, b.y, x + r1rx, y);
     }
-
-    // draw oval (interactive - clicking chooses winner for this match)
-    const oval = drawOval(svg, x, y, r1rx, r1ry, id, label, true);
-    // attach click to choose winner between its two child r0 nodes
-    (function(round, idx){
-      oval.group.addEventListener("click", ()=> {
-        // determine left and right child players (for prompt text)
-        let leftPlayer, rightPlayer;
-        if (idx < 4) {
-          leftPlayer = bracket.r0[2*idx];
-          rightPlayer = bracket.r0[2*idx + 1];
-        } else {
-          const base = 8 + 2*(idx - 4);
-          leftPlayer = bracket.r0[base];
-          rightPlayer = bracket.r0[base + 1];
-        }
-        if (!leftPlayer || !rightPlayer) return;
-        const ok = confirm(`OK = ${leftPlayer.ign} wins\nCancel = ${rightPlayer.ign} wins`);
-        const winner = ok ? leftPlayer : rightPlayer;
-        bracket.r1[idx] = winner;
-        // Clear lower rounds beyond this path (to avoid stale winners)
-        for (let j = idx; j < bracket.r2.length; j++) bracket.r2[j] = bracket.r2[j]; // no-op here
-        renderBracketSVG();
-      });
-    })('r1', i);
+    const label = (bracketLocal.r1 && bracketLocal.r1[i] && bracketLocal.r1[i].ign) ? bracketLocal.r1[i].ign : '?';
+    const oval = drawOval(svg, x, y, r1rx, r1ry, `r1_${i}`, label, true);
+    (function(idx, ovalG){
+      ovalG.group.addEventListener('click', ()=> pickWinnerForR1(idx));
+    })(i, oval);
   }
 
-  // Draw r2 (4 winners: each depends on two r1 winners)
+  // draw r2
   for (let i = 0; i < 4; i++) {
-    const x = pos.r2[i].x;
-    const y = pos.r2[i].y;
-    const id = `r2_${i}`;
-    const label = bracket.r2[i] ? bracket.r2[i].ign : '?';
-    nodes.r2.push({ id, x, y });
-
-    // child r1 indices: for left half i in [0,1] -> r1 indices i*2 and i*2+1
-    // for right half i in [2,3] -> r1 indices (4 + (i-2)*2) etc.
+    const x = pos.r2[i].x, y = pos.r2[i].y;
     let child1Idx, child2Idx;
-    if (i < 2) {
-      child1Idx = 2 * i;
-      child2Idx = 2 * i + 1;
-    } else {
-      child1Idx = 4 + 2 * (i - 2);
-      child2Idx = 4 + 2 * (i - 2) + 1;
-    }
-    const c1 = pos.r1[child1Idx];
-    const c2 = pos.r1[child2Idx];
-
-    // Draw connectors from r1 children to this r2
-    // From child to center: child's x to this x
-    // Choose direction based on which side
+    if (i < 2) { child1Idx = 2*i; child2Idx = 2*i+1; }
+    else { child1Idx = 4 + 2*(i-2); child2Idx = 4 + 2*(i-2) + 1; }
+    const c1 = pos.r1[child1Idx], c2 = pos.r1[child2Idx];
     if (i < 2) {
       drawConnector(svg, c1.x + r1rx, c1.y, x - r2rx, y);
       drawConnector(svg, c2.x + r1rx, c2.y, x - r2rx, y);
@@ -619,98 +518,77 @@ function renderBracketSVG() {
       drawConnector(svg, c1.x - r1rx, c1.y, x + r2rx, y);
       drawConnector(svg, c2.x - r1rx, c2.y, x + r2rx, y);
     }
-
-    const oval = drawOval(svg, x, y, r2rx, r2ry, id, label, true);
-    (function(idx, child1Idx, child2Idx, ovalGroup){
-      ovalGroup.group.addEventListener("click", ()=> {
-        const left = bracket.r1[child1Idx];
-        const right = bracket.r1[child2Idx];
-        if (!left || !right) return;
-        const ok = confirm(`OK = ${left.ign} wins\nCancel = ${right.ign} wins`);
-        const winner = ok ? left : right;
-        bracket.r2[idx] = winner;
-        renderBracketSVG();
-      });
+    const label = (bracketLocal.r2 && bracketLocal.r2[i] && bracketLocal.r2[i].ign) ? bracketLocal.r2[i].ign : '?';
+    const oval = drawOval(svg, x, y, r2rx, r2ry, `r2_${i}`, label, true);
+    (function(idx, c1i, c2i, ovalG){
+      ovalG.group.addEventListener('click', ()=> pickWinnerForR2(idx));
     })(i, child1Idx, child2Idx, oval);
   }
 
-  // Draw r3 (2 winners -> sides for final)
+  // draw r3
   for (let i = 0; i < 2; i++) {
-    const x = pos.r3[i].x;
-    const y = pos.r3[i].y;
-    const id = `r3_${i}`;
-    const label = bracket.r3[i] ? bracket.r3[i].ign : '?';
-    nodes.r3.push({ id, x, y });
-
-    // children: r2[2*i] and r2[2*i+1]
-    const childA = pos.r2[2*i];
-    const childB = pos.r2[2*i + 1];
-
-    // connectors
+    const x = pos.r3[i].x, y = pos.r3[i].y;
+    const childA = pos.r2[2*i], childB = pos.r2[2*i+1];
     drawConnector(svg, childA.x + (childA.x < x ? r2rx : -r2rx), childA.y, x - (x > childA.x ? r3rx : -r3rx), y);
     drawConnector(svg, childB.x + (childB.x < x ? r2rx : -r2rx), childB.y, x - (x > childB.x ? r3rx : -r3rx), y);
-
-    const oval = drawOval(svg, x, y, r3rx, r3ry, id, label, true);
-    (function(idx){
-      oval.group.addEventListener("click", ()=> {
-        const left = bracket.r2[2*idx];
-        const right = bracket.r2[2*idx + 1];
-        if (!left || !right) return;
-        const ok = confirm(`OK = ${left.ign} wins\nCancel = ${right.ign} wins`);
-        const winner = ok ? left : right;
-        bracket.r3[idx] = winner;
-        renderBracketSVG();
-      });
-    })(i);
+    const label = (bracketLocal.r3 && bracketLocal.r3[i] && bracketLocal.r3[i].ign) ? bracketLocal.r3[i].ign : '?';
+    const oval = drawOval(svg, x, y, r3rx, r3ry, `r3_${i}`, label, true);
+    (function(idx, ovalG){
+      ovalG.group.addEventListener('click', ()=> pickWinnerForR3(idx));
+    })(i, oval);
   }
 
-  // Draw final r4 (center)
-  {
-    const x = pos.r4[0].x;
-    const y = pos.r4[0].y;
-    const id = `r4_0`;
-    const label = bracket.r4[0] ? bracket.r4[0].ign : '?';
-
-    // connectors from r3[0] and r3[1] to final
-    const c1 = pos.r3[0];
-    const c2 = pos.r3[1];
-    drawConnector(svg, c1.x + r3rx, c1.y, x - r4rx, y);
-    drawConnector(svg, c2.x - r3rx, c2.y, x + r4rx, y);
-
-    const oval = drawOval(svg, x, y, r4rx, r4ry, id, label, true);
-    oval.group.addEventListener("click", ()=> {
-      const left = bracket.r3[0];
-      const right = bracket.r3[1];
-      if (!left || !right) return;
-      const ok = confirm(`OK = ${left.ign} wins\nCancel = ${right.ign} wins`);
-      const winner = ok ? left : right;
-      bracket.r4[0] = winner;
-      bracket.champion = winner;
-      renderBracketSVG();
-      if (winner) {
-        showPopup(`Champion: ${winner.ign}`);
-      }
-    });
-  }
+  // draw final r4
+  const x = pos.r4[0].x, y = pos.r4[0].y;
+  const c1 = pos.r3[0], c2 = pos.r3[1];
+  drawConnector(svg, c1.x + r3rx, c1.y, x - r4rx, y);
+  drawConnector(svg, c2.x - r3rx, c2.y, x + r4rx, y);
+  const labelFinal = (bracketLocal.r4 && bracketLocal.r4[0] && bracketLocal.r4[0].ign) ? bracketLocal.r4[0].ign : '?';
+  const ovalFinal = drawOval(svg, x, y, r4rx, r4ry, 'r4_0', labelFinal, true);
+  ovalFinal.group.addEventListener('click', ()=> pickWinnerForR4(0));
 }
 
-// Public helper to render (wrap)
-function renderBracket() { renderBracketSVG(); }
+/* ===== UI wiring ===== */
 
-// Re-init bracket when players change
-// Hook into addEntry earlier: we override addEntry to refresh bracket after adding
-// (We wrapped render calls in UI wiring; ensure initBracket called on load and after add.)
+window.addEventListener('DOMContentLoaded', ()=>{
+  // initialize bracket if missing and subscribe
+  initBracketInFirebaseIfMissing();
+  subscribeBracketAndRender();
+  subscribePlayersAndRender();
 
-// Initialize if not already
-if (!bracket) initBracket();
-renderBracketSVG();
+  // add button
+  $('addBtn').onclick = ()=>{
+    const ign = $('ign').value.trim();
+    const uid = $('uid').value.trim();
+    if(!ign){ showPopup("Enter IGN"); return; }
+    if(!uid || uid.length < 3){ showPopup("Enter valid UID"); return; }
+    addPlayerToFirebase(ign, uid);
+    $('ign').value=''; $('uid').value='';
+    showPopup("Done! Player added.");
+  };
 
+  $('exportBtn').onclick = ()=> {
+    // export players once
+    db.ref('players').once('value').then(snap => {
+      const data = snap.val() || {};
+      const rows = [['IGN','UID','Added']];
+      Object.values(data).forEach(r => rows.push([r.ign, r.uid, new Date(r.added).toLocaleString()]));
+      const csv = rows.map(r=> r.map(c=> '"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+      const blob = new Blob([csv], {type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'ff_list.csv'; a.click();
+      URL.revokeObjectURL(url);
+    });
+  };
+
+  $('adminBtn').onclick = ()=> {
+    if(isAdmin){ if(confirm('Disable Admin Mode?')){ isAdmin=false; $('adminBtn').textContent='Enter Admin Mode'; renderPlayerList([]); subscribePlayersAndRender(); } return; }
+    const pwd = prompt('Enter admin password to enable Admin Mode:');
+    if(pwd === 'spannerboss'){ isAdmin = true; $('adminBtn').textContent = 'Admin Mode ON'; subscribePlayersAndRender(); alert('Admin mode enabled. You can now delete entries.'); }
+    else alert('Incorrect password.');
+  };
+});
 </script>
 
-<!-- NOTE:
-  - This is a complete single-file static page.
-  - The client-side admin password is NOT secure; don't rely on it for production.
-  - You can change the visuals (stroke widths, colors) in the CSS or the SVG creation functions.
--->
 </body>
 </html>
