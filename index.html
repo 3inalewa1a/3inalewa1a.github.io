@@ -83,7 +83,7 @@
 
       <div class="list" id="list"></div>
       <footer>
-        <div class="meta">TO GO BE THE GLORY.</div>
+        <div class="meta">TO GOD BE THE GLORY.</div>
       </footer>
     </div>
   </div>
@@ -249,6 +249,72 @@ window.addEventListener('DOMContentLoaded', ()=>{
   };
   $('exportBtn').onclick = exportCSV;
 });
+
+  // ==== 1v1 BRACKET SYSTEM (8 PLAYERS) ====
+sf: [ [null, null], [null, null] ],
+final: [null, null],
+champion: null
+};
+
+
+renderBracket();
+}
+
+
+function renderBracket() {
+const html = `
+<div style="display:flex;gap:40px;overflow-x:auto;">
+<div>
+<h3>Quarter Finals</h3>
+${makeRound('qf')}
+</div>
+<div>
+<h3>Semi Finals</h3>
+${makeRound('sf')}
+</div>
+<div>
+<h3>Final</h3>
+${makeRound('final')}
+</div>
+<div>
+<h3>Champion</h3>
+<div class="match">${window.bracket.champion ? window.bracket.champion.ign : '?'}</div>
+</div>
+</div>`;
+
+
+document.getElementById('bracketArea').innerHTML = html;
+}
+
+
+function makeRound(roundName) {
+return window.bracket[roundName]
+.map((match, i) => `
+<div class="match" onclick="selectWinner('${roundName}', ${i})">
+${match[0] ? match[0].ign : '?'}<br>VS<br>${match[1] ? match[1].ign : '?'}
+</div>`)
+.join('');
+}
+
+
+function selectWinner(round, index) {
+const match = window.bracket[round][index];
+if (!match[0] || !match[1]) return;
+
+
+const winner = confirm(`OK = ${match[0].ign} wins | Cancel = ${match[1].ign} wins`)
+? match[0]
+: match[1];
+
+
+if (round === 'qf') window.bracket.sf[Math.floor(index/2)][index % 2] = winner;
+if (round === 'sf') window.bracket.final[index] = winner;
+if (round === 'final') window.bracket.champion = winner;
+
+
+renderBracket();
+}
+
 
 </script>
 
