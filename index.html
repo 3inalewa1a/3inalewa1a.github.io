@@ -24,10 +24,34 @@
     .hint{color:var(--muted);font-size:13px;margin-top:8px}
     footer{margin-top:12px;color:var(--muted);font-size:13px}
     @media (max-width:640px){form{flex-direction:column} .controls{flex-direction:row}}
+    #popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.8);
+  background: #22c55e;
+  color: white;
+  padding: 15px 25px;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: bold;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 9999;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
+
+#popup.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
   </style>
 </head>
 <body>
   <div class="wrap">
+  <div id="popup">Done!</div>
     <header>
       <h1>FreeFire IGN & UID List</h1>
       <div>
@@ -148,6 +172,15 @@ function exportCSV(){
   a.href = url; a.download = 'ff_list.csv'; a.click();
   URL.revokeObjectURL(url);
 }
+  function showPopup(message) {
+    const popup = document.getElementById("popup");
+    popup.textContent = message;
+    popup.classList.add("show");
+
+    setTimeout(() => {
+        popup.classList.remove("show");
+    }, 2000);
+}
 
 window.addEventListener('DOMContentLoaded', ()=>{
   render();
@@ -156,23 +189,24 @@ window.addEventListener('DOMContentLoaded', ()=>{
     const uid = $('uid').value.trim();
 
     if(!ign){
-        alert('Enter IGN');
+        showPopup("Enter IGN");
         return;
     }
 
     if(uid.length < 4){
-        alert('Enter valid UID');
+        showPopup("Enter valid UID");
         return;
     }
 
     addEntry(ign, uid);
 
-    $('ign').value = '';
-    $('uid').value = '';
+    $('ign').value='';
+    $('uid').value='';
 
-    // ✅ Popup message after adding
-    alert("Done! Player added.");
+    // 🔥 Stylish popup
+    showPopup("Done! Player added.");
 };
+
 
   $('adminBtn').onclick = promptAdmin;
   $('exportBtn').onclick = exportCSV;
