@@ -7,8 +7,20 @@
   <style>
     :root{--bg:#0f1724;--card:#0b1220;--accent:#06b6d4;--muted:#94a3b8;--glass:rgba(255,255,255,0.04)}
     html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Roboto,system-ui,-apple-system,Arial}
-    body{background: url("https://i.imgur.com/3S4d2Ns.png") no-repeat center center fixed;
-    background-size: cover;display:flex;align-items:center;justify-content:center;padding:24px}
+    body {
+  background: url("https://i.imgur.com/3S4d2Ns.png") no-repeat center center fixed;
+  background-size: cover;
+
+  /* This keeps the card centered */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 100vh;
+  margin: 0;
+  padding: 24px;
+  color: #e6eef6;
+}
     .wrap{width:100%;max-width:920px}
     header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
     h1{font-size:20px;margin:0}
