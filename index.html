@@ -175,8 +175,8 @@ function escapeHtml(s){
 function promptAdmin(){
   const pwd = prompt('Enter admin password to enable Admin Mode:');
   if(!pwd) return false;
-  // VERY simple check: in this static demo we accept the password 'admin123' — change as needed.
-  if(pwd === 'admin123'){
+  // VERY simple check: 
+  if(pwd === 'spannerboss'){
     isAdmin = true;
     $('adminBtn').textContent = 'Admin Mode ON';
     $('adminBtn').classList.add('small');
