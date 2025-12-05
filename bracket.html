@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>FreeFire IGN & UID List + 16-player Bracket</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#06b6d4;--muted:#94a3b8;--glass:rgba(255,255,255,0.04)}
+    html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Roboto,system-ui,-apple-system,Arial}
+    body {
+      background: url("https://i.imgur.com/3S4d2Ns.png") no-repeat center center fixed;
+      background-size: cover;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 24px;
+      color: #e6eef6;
+    }
+
+    .wrap{width:100%;max-width:1100px}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    h1{font-size:20px;margin:0}
+    .card{background:var(--card);padding:18px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    form{display:flex;gap:10px;flex-wrap:wrap}
+    input[type=text]{padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:var(--glass);color:inherit;min-width:160px}
+    button{background:var(--accent);border:none;color:#042029;padding:10px 14px;border-radius:8px;cursor:pointer}
+    .list{margin-top:14px}
+    .row{display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:8px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);margin-bottom:8px}
+    .meta{color:var(--muted);font-size:13px}
+    .controls{display:flex;gap:8px}
+    .ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);padding:8px;border-radius:8px}
+    .small{font-size:13px;padding:6px 8px}
+    .hint{color:var(--muted);font-size:13px;margin-top:8px}
+    footer{margin-top:12px;color:var(--muted);font-size:13px}
+    @media (max-width:1000px){ .wrap{padding:10px} }
+    @media (max-width:640px){form{flex-direction:column} .controls{flex-direction:row}}
+
+    #popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.8);
+      background: #22c55e;
+      color: white;
+      padding: 15px 25px;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: bold;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      z-index: 9999;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    }
+    #popup.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    /* Bracket card adjustments */
+    .bracket-card { margin-top: 24px; padding: 18px; border-radius: 12px; background: rgba(255,255,255,0.02); }
+    #bracketContainer { width: 100%; overflow-x: auto; padding: 10px 0; }
+    /* Center small caption under bracket for mobile */
+    .bracket-caption { color: var(--muted); font-size: 13px; margin-top: 8px; text-align:center; }
+
+    /* Small tooltip style when hovering interactive nodes */
+    .hint-node { cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div id="popup">Done!</div>
+    <header>
+      <h1 style="font-size:48px;font-weight:900;color:#ff0000;text-shadow:4px 4px 10px #000, 0 0 25px #ff0000, 0 0 8px #000; font-family:'Impact','Haettenschweiler','Anton','Arial Black',sans-serif;letter-spacing:3px;">
+        🔥 FreeFire IGN & UID List 🔥
+      </h1>
+      <div>
+        <button id="adminBtn" class="ghost small">Enter Admin Mode</button>
+      </div>
+    </header>
+
+    <div class="card">
+      <form id="addForm" onsubmit="return false">
+        <input id="ign" type="text" placeholder="IGN (in-game name)" />
+        <input id="uid" type="text" placeholder="UID (numbers only)" />
+        <button id="addBtn">Add to List </button>
+        <button id="exportBtn" type="button" class="ghost small">Export CSV</button>
+      </form>
+      <div class="hint">Players can add their IGN & UID. Deleting entries requires Admin Mode (password-protected).</div>
+
+      <div class="list" id="list"></div>
+      <footer>
+        <div class="meta">TO GOD BE THE GLORY.</div>
+      </footer>
+
+      <!-- BRACKET SECTION -->
+      <div class="bracket-card">
+        <h2 style="margin:0 0 10px 0;">🏆 16-Player Tournament Bracket (Medium)</h2>
+        <div id="bracketContainer">
+          <!-- SVG inserted here by JS -->
+          <svg id="bracketSvg" width="900" height="520" viewBox="0 0 900 520" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+        <div class="bracket-caption">Click the match bubble in the next round to choose the winner (OK = left, Cancel = right).</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ====== CONFIG ======
+// Change this admin password before publishing. This is client-side protection (not fully secure).
+const ADMIN_PASSWORD_HASH = 'b0b1f49f9dfb8b3e2a0f3a9f5a9f5c1a'; // placeholder
+// ====================
+
+const STORAGE_KEY = 'ff_ign_uid_list_v1';
+let isAdmin = false;
+
+function $(id){return document.getElementById(id)}
+
+function loadList(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY) || '[]';
+    return JSON.parse(raw);
+  }catch(e){return []}
+}
+
+function saveList(list){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+}
+
+function render(){
+  const container = $('list');
+  const list = loadList();
+  container.innerHTML = '';
+  if(list.length===0){ container.innerHTML = '<div class="meta">No entries yet. Be the first!</div>'; return }
+  list.forEach((item, idx)=>{
+    const el = document.createElement('div');
+    el.className = 'row';
+    el.innerHTML = `
+      <div>
+        <div><strong>${escapeHtml(item.ign)}</strong> <span class="meta">(UID: ${escapeHtml(item.uid)})</span></div>
+        <div class="meta">Added: ${new Date(item.added).toLocaleString()}</div>
+      </div>
+    `;
+    const right = document.createElement('div');
+    right.className = 'controls';
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'ghost small';
+    copyBtn.textContent = 'Copy';
+    copyBtn.onclick = ()=>{navigator.clipboard.writeText(`${item.ign} | ${item.uid}`)};
+    right.appendChild(copyBtn);
+
+    const reportBtn = document.createElement('button');
+    reportBtn.className = 'ghost small';
+    reportBtn.textContent = 'Report';
+    reportBtn.onclick = ()=>{alert('To report this entry, contact the site admin.');};
+    right.appendChild(reportBtn);
+
+    if(isAdmin){
+      const delBtn = document.createElement('button');
+      delBtn.className = 'small';
+      delBtn.textContent = 'Delete';
+      delBtn.onclick = ()=>{ if(confirm('Delete this entry?')){ deleteEntry(idx) } };
+      right.appendChild(delBtn);
+    }
+
+    el.appendChild(right);
+    container.appendChild(el);
+  })
+}
+
+function addEntry(ign, uid){
+  const list = loadList();
+  list.unshift({ign:ign, uid:uid, added:Date.now()});
+  saveList(list);
+  render();
+}
+
+function deleteEntry(index){
+  const list = loadList();
+  if(index<0||index>=list.length) return;
+  list.splice(index,1);
+  saveList(list);
+  render();
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, function(m){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]});
+}
+
+// Simple password prompt (client-side). Replace with real auth for production.
+function promptAdmin(){
+  const pwd = prompt('Enter admin password to enable Admin Mode:');
+  if(!pwd) return false;
+
+  if(pwd === 'spannerboss'){
+    isAdmin = true;
+    $('adminBtn').textContent = 'Admin Mode ON';
+    $('adminBtn').classList.add('small');
+    render();
+    alert('Admin mode enabled. You can now delete entries.');
+    return true;
+  }else{
+    alert('Incorrect password.');
+    return false;
+  }
+}
+
+
+function exportCSV(){
+  const list = loadList();
+  if(list.length===0){ alert('No entries to export.'); return }
+  const rows = [['IGN','UID','Added']];
+  list.forEach(r=> rows.push([r.ign,r.uid,new Date(r.added).toLocaleString()]));
+  const csv = rows.map(r=> r.map(c=> '"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'ff_list.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Validate UID: digits only (but allow letters if necessary)
+function validateUID(uid){
+  return uid.trim().length>=4; // basic length check
+}
+function showPopup(message) {
+  const popup = document.getElementById("popup");
+  popup.textContent = message;
+  popup.classList.add("show");
+
+  setTimeout(() => {
+      popup.classList.remove("show");
+  }, 2000);
+}
+
+// UI wiring
+window.addEventListener('DOMContentLoaded', ()=>{
+  render();
+  initBracket(); // initialize bracket with current players
+  renderBracketSVG();
+
+  $('addBtn').onclick = ()=>{
+    const ign = $('ign').value.trim();
+    const uid = $('uid').value.trim();
+
+    if(!ign){
+        showPopup("Enter IGN");
+        return;
+    }
+
+    if(uid.length < 4){
+        showPopup("Enter valid UID");
+        return;
+    }
+
+    addEntry(ign, uid);
+
+    $('ign').value='';
+    $('uid').value='';
+
+    // Refresh bracket (auto-fill)
+    initBracket();
+    renderBracketSVG();
+
+    showPopup("Done! Player added.");
+  };
+
+  $('adminBtn').onclick = ()=>{
+    if(isAdmin){ if(confirm('Disable Admin Mode?')){ isAdmin=false; $('adminBtn').textContent='Enter Admin Mode'; render(); } return }
+    promptAdmin();
+  };
+  $('exportBtn').onclick = exportCSV;
+});
+
+/* =========================
+   SVG BRACKET (16 players)
+   ========================= */
+
+let bracket = null; // data structure to hold players/winners
+
+// Generate coordinates for medium size SVG (900x520)
+const svgW = 900;
+const svgH = 520;
+const svg = $('bracketSvg');
+
+// Build bracket data from player list (first 16)
+function generatePlayersArray() {
+  const players = loadList().slice(0,16);
+  // ensure exactly 16 entries (pad)
+  while (players.length < 16) players.push({ ign: "Empty", uid: "—" });
+  return players;
+}
+
+// Initialize bracket rounds (r0: initial 16 players as 8 pairs on left+right)
+// r0: 16 players (indices 0..15), r1: 8 winners (matches: pairs of r0), r2: 4 winners, r3: 2 winners, r4: final winner (1)
+function initBracket() {
+  const players = generatePlayersArray();
+
+  // r0 stored as array of 16 player objects
+  const r0 = players.slice(0,16);
+
+  bracket = {
+    r0: r0,               // 16 players
+    r1: new Array(8).fill(null),  // 8 matches -> 8 winners
+    r2: new Array(4).fill(null),  // 4 winners
+    r3: new Array(2).fill(null),  // 2 winners (semifinal winners -> final)
+    r4: new Array(1).fill(null),  // final winner (the champion)
+    champion: null
+  };
+}
+
+// Calculate positions for each round and draw
+function computePositions() {
+  // left side: 8 players -> 4 matches
+  // right side: 8 players -> 4 matches
+  const leftX = 60;
+  const leftMidX = 220;
+  const leftQuarterX = 380;
+
+  const rightX = svgW - 60;
+  const rightMidX = svgW - 220;
+  const rightQuarterX = svgW - 380;
+
+  const finalX = svgW/2;
+  const centerX = svgW/2;
+
+  const matchesPerSide = 4;
+  const spacing = svgH / (matchesPerSide + 1); // vertical spacing between match centers
+
+  const positions = {
+    r0: [], // 16 positions
+    r1: [], // 8 positions
+    r2: [], // 4 positions
+    r3: [], // 2 positions
+    r4: [{ x: finalX, y: svgH/2 }]
+  };
+
+  // Left side r0 (indices 0..7) -> 8 players (4 matches)
+  for (let m = 0; m < matchesPerSide; m++) {
+    const centerY = (m + 1) * spacing;
+    positions.r0.push({ x: leftX, y: centerY - 14 }); // player A
+    positions.r0.push({ x: leftX, y: centerY + 14 }); // player B
+
+    positions.r1.push({ x: leftMidX, y: centerY }); // quarter winner (left side)
+  }
+
+  // Right side r0 (indices 8..15)
+  for (let m = 0; m < matchesPerSide; m++) {
+    const centerY = (m + 1) * spacing;
+    positions.r0.push({ x: rightX, y: centerY - 14 }); // player A
+    positions.r0.push({ x: rightX, y: centerY + 14 }); // player B
+
+    positions.r1.push({ x: rightMidX, y: centerY }); // quarter winner (right side)
+  }
+
+  // r2 (semis) positions: two per side (one for left half, one for right half)
+  // For left semis (two r1 winners): y = average of r1 winners (m=0 & 1)
+  for (let half = 0; half < 2; half++) {
+    // left half semis
+    const idx0 = half * 2;
+    const idx1 = half * 2 + 1;
+    const yLeft = ((positions.r1[idx0].y + positions.r1[idx1].y) / 2) - 0;
+    positions.r2.push({ x: leftQuarterX, y: yLeft });
+  }
+  for (let half = 0; half < 2; half++) {
+    // right half semis
+    const idx0 = 4 + half * 2;
+    const idx1
